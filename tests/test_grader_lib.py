@@ -1,10 +1,15 @@
+from pathlib import Path
+
 import grader_lib
 from grader_lib import (
     discover_session_files,
+    parse_session_jsonl,
     redact_secrets,
     resolve_claude_root,
     select_recent_sessions,
 )
+
+FIXTURES = Path(__file__).resolve().parents[1] / "skills" / "grader" / "fixtures" / "sessions"
 
 
 def test_redact_sk_api_key_pattern():
@@ -40,6 +45,14 @@ def test_resolve_claude_root_uses_env(tmp_path, monkeypatch):
     custom.mkdir()
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(custom))
     assert resolve_claude_root() == custom
+
+
+def test_parse_weak_session_extracts_user_prompts_only():
+    session = parse_session_jsonl(FIXTURES / "weak_vague.jsonl")
+    assert session["session_id"] == "weak1"
+    assert session["user_prompts"] == ["fix it", "the bug"]
+    assert session["prompt_count"] == 2
+    assert session["started_at"].startswith("2026-07-01")
 
 
 def test_discover_and_select_recent(tmp_path):

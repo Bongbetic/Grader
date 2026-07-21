@@ -1,0 +1,3 @@
+{"type":"user","timestamp":"2026-07-01T10:00:00.000Z","sessionId":"weak1","message":{"role":"user","content":"fix it"},"origin":{"kind":"human"}}
+{"type":"assistant","timestamp":"2026-07-01T10:00:05.000Z","sessionId":"weak1","message":{"role":"assistant","content":[{"type":"text","text":"What should I fix?"}]}}
+{"type":"user","timestamp":"2026-07-01T10:00:20.000Z","sessionId":"weak1","message":{"role":"user","content":"the bug"},"origin":{"kind":"human"}}
