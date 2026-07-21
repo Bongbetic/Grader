@@ -33,8 +33,12 @@ def test_redact_leaves_normal_prompt():
     assert notes == []
 
 
-def test_default_session_limit_is_30():
-    assert grader_lib.DEFAULT_SESSION_LIMIT == 30
+def test_default_prompt_limit_is_100():
+    assert grader_lib.DEFAULT_PROMPT_LIMIT == 100
+
+
+def test_default_session_limit_is_100():
+    assert grader_lib.DEFAULT_SESSION_LIMIT == 100
 
 
 def test_empty_dossier_schema():
@@ -136,11 +140,43 @@ def test_build_dossier_skips_empty_sessions(tmp_path):
     nonempty = projects / "weak.jsonl"
     src = FIXTURES / "weak_vague.jsonl"
     nonempty.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
-    d = build_dossier_from_claude_root(tmp_path, limit=30)
+    d = build_dossier_from_claude_root(tmp_path, session_limit=30)
     assert d["sessions_found"] == 2
     assert d["sessions_graded"] == 1
     assert len(d["sessions"]) == 1
     assert d["sessions"][0]["prompt_count"] == 2
+
+
+def test_build_dossier_stops_at_prompt_limit(tmp_path):
+    projects = tmp_path / "projects" / "demo"
+    projects.mkdir(parents=True)
+    # Two sessions, 3 prompts each; prompt_limit=4 -> first session full + 1 from second (newest-first)
+    newer = projects / "newer.jsonl"
+    older = projects / "older.jsonl"
+
+    def write_session(path, sid, prompts, mtime_offset):
+        lines = []
+        for i, p in enumerate(prompts):
+            lines.append(json.dumps({
+                "type": "user",
+                "sessionId": sid,
+                "message": {"role": "user", "content": p},
+                "timestamp": f"2026-07-0{i+1}T00:00:00Z",
+            }))
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        import os, time
+        os.utime(path, (time.time() - mtime_offset, time.time() - mtime_offset))
+
+    write_session(newer, "new", ["n1", "n2", "n3"], 0)
+    write_session(older, "old", ["o1", "o2", "o3"], 100)
+    d = build_dossier_from_claude_root(tmp_path, session_limit=10, prompt_limit=4)
+    assert d["prompts_sampled"] == 4
+    assert d["prompts_available"] == 6
+    assert d["sessions_scanned"] == 2
+    assert sum(s["prompt_count"] for s in d["sessions"]) == 4
+    assert d["sessions"][0]["session_id"] == "new"
+    assert d["sessions"][0]["user_prompts"] == ["n1", "n2", "n3"]
+    assert d["sessions"][1]["user_prompts"] == ["o1"]
 
 
 def test_discover_and_select_recent(tmp_path):
