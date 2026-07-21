@@ -4,13 +4,16 @@ from pathlib import Path
 import grader_lib
 from grader_lib import (
     MAX_PROMPT_CHARS,
+    attach_efficiency,
     build_dossier_from_claude_root,
     build_dossier_from_export,
+    compute_efficiency,
     compute_signals,
     discover_session_files,
     parse_session_jsonl,
     redact_secrets,
     resolve_claude_root,
+    segment_tasks,
     select_recent_sessions,
     truncate_prompt,
 )
@@ -68,6 +71,46 @@ def test_compute_signals_detects_correction_and_restate():
     assert s["corrections"] >= 1
 
 
+def test_segment_tasks_splits_on_topic_shift_and_merges_corrections():
+    prompts = [
+        "Add dark mode to settings using CSS variables",
+        "No, wrong — put the toggle in the navbar instead",  # continuation (correction)
+        "Write a haiku about rain",  # topic shift
+    ]
+    tasks = segment_tasks(prompts)
+    assert len(tasks) == 2
+    assert tasks[0]["prompt_count"] == 2
+    assert tasks[0]["corrections"] >= 1
+    assert tasks[1]["prompt_count"] == 1
+
+
+def test_compute_efficiency_math():
+    tasks = segment_tasks([
+        "Ship login with magic link and tests",
+        "Also add rate limiting to login",  # likely same task if overlap enough; if not, adjust fixture
+        "Translate 'hello' to French",
+    ])
+    # Use explicit constructed tasks for stable math:
+    tasks = [
+        {"prompt_count": 1, "corrections": 0, "restates": 0, "resolved": True, "prompts": ["a"], "prompt_indices": [0]},
+        {"prompt_count": 3, "corrections": 1, "restates": 0, "resolved": True, "prompts": ["b", "c", "d"], "prompt_indices": [1, 2, 3]},
+    ]
+    eff = compute_efficiency(tasks)
+    assert abs(eff["prompts_per_task_mean"] - 2.0) < 1e-9
+    assert eff["prompts_per_task_median"] == 2.0
+    assert abs(eff["single_shot_rate"] - 0.5) < 1e-9
+    assert abs(eff["rework_rate"] - 0.5) < 1e-9
+    assert eff["worst_task"]["prompt_count"] == 3
+
+
+def test_attach_efficiency_adds_aggregate_to_dossier():
+    dossier = {"sessions": [{"user_prompts": ["Add login", "Translate hello to French"]}]}
+    out = attach_efficiency(dossier)
+    assert out is dossier
+    assert out["efficiency"]["prompts_per_task_mean"] == 1.0
+    assert out["efficiency"]["worst_task"]["prompt_count"] == 1
+
+
 def test_parse_weak_session_extracts_user_prompts_only():
     session = parse_session_jsonl(FIXTURES / "weak_vague.jsonl")
     assert session["session_id"] == "weak1"
@@ -85,6 +128,7 @@ def test_build_dossier_from_export_weak():
     assert d["intake_path"] == "export"
     assert d["sessions_graded"] == 1
     assert d["sessions"][0]["user_prompts"] == ["fix it", "the bug"]
+    assert d["efficiency"]["prompts_per_task_mean"] == 1.0
 
 
 def test_truncate_prompt_leaves_short_text():

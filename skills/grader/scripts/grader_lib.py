@@ -9,6 +9,7 @@ from typing import Any
 
 DEFAULT_SESSION_LIMIT = 100
 DEFAULT_PROMPT_LIMIT = 100
+TASK_CONTINUITY_THRESHOLD: float = 0.3
 MAX_PROMPT_CHARS = 4000
 _TRUNCATED_SUFFIX = " …[truncated]"
 
@@ -117,7 +118,7 @@ def build_dossier_from_claude_root(
     dossier["prompts_sampled"] = prompts_sampled
     dossier["prompts_available"] = prompts_available
     dossier["redaction_notes"] = notes
-    return dossier
+    return attach_efficiency(dossier)
 
 
 def _parse_turns(text: str) -> list[tuple[str, str]]:
@@ -176,7 +177,7 @@ def build_dossier_from_export(text: str, intake_path: str = "export") -> dict[st
     dossier["prompts_sampled"] = prompts_total
     dossier["prompts_available"] = prompts_total
     dossier["redaction_notes"] = notes
-    return dossier
+    return attach_efficiency(dossier)
 
 
 def _content_to_text(content: Any) -> str | None:
@@ -236,6 +237,92 @@ def compute_signals(user_prompts: list[str], assistant_questions: int = 0) -> di
         "clarify_loops": clarify_loops,
         "abandoned_goal": abandoned,
     }
+
+
+def segment_tasks(user_prompts: list[str]) -> list[dict[str, Any]]:
+    if not user_prompts:
+        return []
+    tasks: list[dict[str, Any]] = []
+    start = 0
+    for i in range(1, len(user_prompts)):
+        prev, cur = user_prompts[i - 1], user_prompts[i]
+        overlap = _jaccard(_tokens(prev), _tokens(cur))
+        is_correction = bool(_CORRECTION_RE.search(cur))
+        is_restate = overlap >= 0.8
+        continuous = overlap >= TASK_CONTINUITY_THRESHOLD or is_correction or is_restate
+        if not continuous:
+            chunk = user_prompts[start:i]
+            tasks.append(_task_from_prompts(chunk, list(range(start, i))))
+            start = i
+    chunk = user_prompts[start:]
+    tasks.append(_task_from_prompts(chunk, list(range(start, len(user_prompts)))))
+    return tasks
+
+
+def _task_from_prompts(prompts: list[str], indices: list[int]) -> dict[str, Any]:
+    signals = compute_signals(prompts)
+    resolved = not (
+        bool(prompts and _ABORT_RE.search(prompts[-1]))
+        or (len(prompts) >= 3 and len(prompts[-1].strip()) < 12)
+    )
+    return {
+        "prompt_indices": indices,
+        "prompts": prompts,
+        "prompt_count": len(prompts),
+        "corrections": signals["corrections"],
+        "restates": signals["restates"],
+        "resolved": resolved,
+    }
+
+
+def compute_efficiency(tasks: list[dict[str, Any]]) -> dict[str, Any]:
+    if not tasks:
+        return {
+            "prompts_per_task_mean": 0.0,
+            "prompts_per_task_median": 0.0,
+            "single_shot_rate": 0.0,
+            "rework_rate": 0.0,
+            "tasks": [],
+            "worst_task": None,
+        }
+    counts = [t["prompt_count"] for t in tasks]
+    mean = sum(counts) / len(counts)
+    sorted_counts = sorted(counts)
+    mid = len(sorted_counts) // 2
+    median = (
+        sorted_counts[mid]
+        if len(sorted_counts) % 2 == 1
+        else (sorted_counts[mid - 1] + sorted_counts[mid]) / 2
+    )
+    single = sum(1 for c in counts if c == 1) / len(counts)
+    rework = sum(1 for t in tasks if (t["corrections"] + t["restates"]) >= 1) / len(counts)
+    summaries = [
+        {
+            "prompt_count": t["prompt_count"],
+            "corrections": t["corrections"],
+            "restates": t["restates"],
+            "resolved": t["resolved"],
+            "prompt_indices": t["prompt_indices"],
+        }
+        for t in tasks
+    ]
+    worst = max(summaries, key=lambda s: s["prompt_count"])
+    return {
+        "prompts_per_task_mean": mean,
+        "prompts_per_task_median": float(median),
+        "single_shot_rate": single,
+        "rework_rate": rework,
+        "tasks": summaries,
+        "worst_task": worst,
+    }
+
+
+def attach_efficiency(dossier: dict[str, Any]) -> dict[str, Any]:
+    flat: list[str] = []
+    for session in dossier.get("sessions", []):
+        flat.extend(session.get("user_prompts") or [])
+    dossier["efficiency"] = compute_efficiency(segment_tasks(flat))
+    return dossier
 
 
 def parse_session_jsonl(path: Path) -> dict[str, Any]:
