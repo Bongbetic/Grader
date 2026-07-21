@@ -9,7 +9,8 @@
 **What it is not:** a token/cost meter. It never scores spend, latency, cache, or model tier.
 
 📦 **Repo:** https://github.com/Bongbetic/Grader  
-⌨️ **Command:** `/grader` (skill folder must stay named `grader`)
+⌨️ **Command:** `/grader` (skill folder must stay named `grader`)  
+🤝 **Contributing:** see [`CONTRIBUTORS.md`](CONTRIBUTORS.md) for architecture + how to land a change
 
 ---
 
