@@ -112,6 +112,8 @@ Retry once; if it still fails, report the error. Do not invent tokens. Prefer pl
 
 ### Success criteria (report these)
 
+- [ ] pip install -r requirements.txt succeeded (Python 3.11+)
+- [ ] pip install -r requirements.txt succeeded (Python 3.11+)
 - [ ] `%USERPROFILE%\.claude\skills\grader\SKILL.md` or `~/.claude/skills/grader/SKILL.md` exists
 - [ ] Same folder contains `checklist.md`, `signals.md`, and `scripts/extract_dossier.py`
 - [ ] `grader.zip` built; archive contains `grader/SKILL.md`
