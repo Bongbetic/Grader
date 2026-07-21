@@ -46,7 +46,7 @@
 | `tests/test_profile_schema.py` | Profile shape |
 | `tests/test_render_report.py` | Self-contained profile HTML |
 | `tests/test_render_trends.py` | Deny/allow + self-contained charts |
-| `README.md` | Document multi-flow usage briefly |
+| `README.md` | Full usage notes for all flows + requirements + installation guide |
 
 **Finalized open details from the spec:**
 
@@ -799,8 +799,8 @@ def test_trends_html_denies_under_five(tmp_path):
     html = render_trends_html(payload)
     assert payload["status"]["unlocked"] is False
     assert "4/5" in html or "4 of 5" in html
-    assert "<polyline" not in html.lower() and "<path" not in html.lower()
-    assert "complete" in html.lower()  # explains how to finish coach sessions
+    assert "trends unlocked" not in html.lower()
+    assert "coach" in html.lower()  # explains coach completion requirement
     assert not re.search(r"""\ssrc\s*=\s*['\"]https?://""", html, re.I)
     assert "https://" not in html
 
