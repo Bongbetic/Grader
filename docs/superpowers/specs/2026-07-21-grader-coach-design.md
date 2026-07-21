@@ -2,9 +2,9 @@
 
 > Requirements and product design for the next major skill build. Absorbs `v2plan.md` technical decisions into a multi-flow coaching product. Claude Code only for this horizon.
 
-**Status:** Design approved in brainstorm (2026-07-21). Awaiting user review of this written spec before implementation planning.
+**Status:** Approved (2026-07-21). Implementation plan: `docs/superpowers/plans/2026-07-21-grader-coach-implementation.md`.
 
-**Artifact readiness:** requirements / design (not an implementation plan).
+**Artifact readiness:** requirements / design (implementation plan written separately).
 
 ---
 
