@@ -2,6 +2,7 @@ from pathlib import Path
 
 import grader_lib
 from grader_lib import (
+    compute_signals,
     discover_session_files,
     parse_session_jsonl,
     redact_secrets,
@@ -45,6 +46,17 @@ def test_resolve_claude_root_uses_env(tmp_path, monkeypatch):
     custom.mkdir()
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(custom))
     assert resolve_claude_root() == custom
+
+
+def test_compute_signals_detects_correction_and_restate():
+    prompts = [
+        "Add a login form with email and password",
+        "Add a login form with email and password fields",
+        "No, wrong — use magic link auth instead",
+    ]
+    s = compute_signals(prompts)
+    assert s["restates"] >= 1
+    assert s["corrections"] >= 1
 
 
 def test_parse_weak_session_extracts_user_prompts_only():

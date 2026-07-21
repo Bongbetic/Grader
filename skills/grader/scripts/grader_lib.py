@@ -82,11 +82,54 @@ def _content_to_text(content: Any) -> str | None:
     return None
 
 
+_CORRECTION_RE = re.compile(
+    r"(?i)\b(no,|wrong|not what i|i meant|actually,|fix:|that's incorrect)\b"
+)
+_ABORT_RE = re.compile(r"(?i)\b(never ?mind|cancel that|abort|stop working on this)\b")
+
+
+def _tokens(s: str) -> set[str]:
+    return set(re.findall(r"[a-z0-9]+", s.lower()))
+
+
+def _jaccard(a: set[str], b: set[str]) -> float:
+    if not a and not b:
+        return 1.0
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
+
+
+def compute_signals(user_prompts: list[str], assistant_questions: int = 0) -> dict[str, Any]:
+    corrections = sum(1 for p in user_prompts if _CORRECTION_RE.search(p))
+    restates = 0
+    for i in range(1, len(user_prompts)):
+        prev, cur = user_prompts[i - 1], user_prompts[i]
+        if _jaccard(_tokens(prev), _tokens(cur)) >= 0.8:
+            if abs(len(prev) - len(cur)) <= max(10, int(0.3 * max(len(prev), len(cur)))):
+                restates += 1
+    clarify_loops = 0
+    if assistant_questions >= 2:
+        clarify_loops = sum(1 for p in user_prompts if len(p.strip()) < 40)
+    abandoned = False
+    if user_prompts and _ABORT_RE.search(user_prompts[-1]):
+        abandoned = True
+    elif len(user_prompts) >= 3 and len(user_prompts[-1].strip()) < 12:
+        abandoned = True
+    return {
+        "corrections": corrections,
+        "restates": restates,
+        "clarify_loops": clarify_loops,
+        "abandoned_goal": abandoned,
+    }
+
+
 def parse_session_jsonl(path: Path) -> dict[str, Any]:
     prompts: list[str] = []
     times: list[str] = []
     session_id = path.stem
     redaction_notes: list[str] = []
+    assistant_questions = 0
     with path.open(encoding="utf-8") as f:
         for line in f:
             line = line.strip()
@@ -98,6 +141,11 @@ def parse_session_jsonl(path: Path) -> dict[str, Any]:
                 continue
             if ev.get("sessionId"):
                 session_id = ev["sessionId"]
+            if ev.get("type") == "assistant":
+                msg = ev.get("message") or {}
+                text = _content_to_text(msg.get("content"))
+                if text and "?" in text:
+                    assistant_questions += 1
             text = None
             if ev.get("type") == "user":
                 origin = ev.get("origin") or {}
@@ -128,11 +176,6 @@ def parse_session_jsonl(path: Path) -> dict[str, Any]:
         "ended_at": times[-1] if times else None,
         "user_prompts": prompts,
         "prompt_count": len(prompts),
-        "signals": {
-            "corrections": 0,
-            "restates": 0,
-            "clarify_loops": 0,
-            "abandoned_goal": False,
-        },
+        "signals": compute_signals(prompts, assistant_questions),
         "_redaction_notes": redaction_notes,
     }
