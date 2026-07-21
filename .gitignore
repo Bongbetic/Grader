@@ -1,7 +1,5 @@
 __pycache__/
 .pytest_tmp/
 .superpowers/
-docs/*
-!docs/superpowers/
-!docs/superpowers/**
+docs/
 dist/
