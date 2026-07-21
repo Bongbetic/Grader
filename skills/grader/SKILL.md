@@ -1,12 +1,22 @@
 ---
 name: grader
-description: Builds a Prompting Profile from Claude Code history or pasted transcripts. Use when asked to grade prompts, review prompting habits, run grader, coach prompting, practice prompting, show progress, or show trends.
+description: >
+  Prompt coach for Claude Code vibecoders. Builds a Prompting Profile (Prompt DNA,
+  Skill/Efficiency/Consistency) from Claude Code history or pasted exports, then
+  grades prompting craft, coaches live prompt-writing, runs practice drills, and
+  shows trends after completed coach sessions. Use when asked to grade prompts,
+  improve Claude Code prompting, review prompting habits, run /grader, coach me
+  to prompt better, practice prompting, vibecode prompting help, prompt DNA,
+  prompting profile, show progress, or show trends. Teaches clearer agent prompts
+  without scoring tokens, cost, latency, or model tier.
 disable-model-invocation: false
 ---
 
-# Grader
+# Grader — Prompt Coach for Claude Code vibecoders
 
 Works on **Claude Code** (CLI / Code Desktop) and **Claude Desktop / claude.ai** (uploaded skill with code execution). Keep the skill name `/grader`.
+
+Audience: vibecoders and builders who ship with Claude Code and want sharper prompts, fewer correction loops, and a repeatable practice loop — not a cost meter.
 
 ## Hard gates
 
