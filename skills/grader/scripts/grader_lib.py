@@ -7,7 +7,8 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-DEFAULT_SESSION_LIMIT = 30
+DEFAULT_SESSION_LIMIT = 100
+DEFAULT_PROMPT_LIMIT = 100
 MAX_PROMPT_CHARS = 4000
 _TRUNCATED_SUFFIX = " …[truncated]"
 
@@ -78,24 +79,43 @@ def select_recent_sessions(
 
 
 def build_dossier_from_claude_root(
-    claude_root: Path, limit: int = DEFAULT_SESSION_LIMIT
+    claude_root: Path,
+    session_limit: int = DEFAULT_SESSION_LIMIT,
+    prompt_limit: int = DEFAULT_PROMPT_LIMIT,
 ) -> dict[str, Any]:
     found = discover_session_files(claude_root)
-    selected = select_recent_sessions(found, limit=limit)
+    selected = select_recent_sessions(found, limit=session_limit)
     dossier = empty_dossier("auto")
     dossier["sessions_found"] = len(found)
     notes: list[str] = []
-    sessions = []
+    sessions: list[dict[str, Any]] = []
+    prompts_sampled = 0
+    prompts_available = 0
     for path in selected:
         session = parse_session_jsonl(path)
+        prompts_available += session["prompt_count"]
         if session["prompt_count"] == 0:
             continue
+        if prompts_sampled >= prompt_limit:
+            continue
+        remaining = prompt_limit - prompts_sampled
+        full_prompts = session["user_prompts"]
+        if len(full_prompts) > remaining:
+            session = dict(session)
+            session["user_prompts"] = full_prompts[:remaining]
+            session["prompt_count"] = len(session["user_prompts"])
+            session["partial"] = True
+            session["signals"] = compute_signals(session["user_prompts"])
         for n in session.pop("_redaction_notes", []):
             if n not in notes:
                 notes.append(n)
+        prompts_sampled += session["prompt_count"]
         sessions.append(session)
     dossier["sessions"] = sessions
     dossier["sessions_graded"] = len(sessions)
+    dossier["sessions_scanned"] = len(selected)
+    dossier["prompts_sampled"] = prompts_sampled
+    dossier["prompts_available"] = prompts_available
     dossier["redaction_notes"] = notes
     return dossier
 
@@ -152,6 +172,9 @@ def build_dossier_from_export(text: str, intake_path: str = "export") -> dict[st
     dossier["sessions"] = sessions
     dossier["sessions_found"] = len(sessions)
     dossier["sessions_graded"] = len(sessions)
+    prompts_total = sum(s["prompt_count"] for s in sessions)
+    dossier["prompts_sampled"] = prompts_total
+    dossier["prompts_available"] = prompts_total
     dossier["redaction_notes"] = notes
     return dossier
 
