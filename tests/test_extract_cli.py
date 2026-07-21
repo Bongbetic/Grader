@@ -1,0 +1,27 @@
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPT = ROOT / "skills" / "grader" / "scripts" / "extract_dossier.py"
+FIXTURE_ROOT = ROOT / "skills" / "grader" / "fixtures" / "fake_claude"
+
+
+def test_cli_builds_dossier_from_fixture_tree(tmp_path):
+    # Arrange: fake ~/.claude/projects/...
+    projects = tmp_path / "projects" / "demo"
+    projects.mkdir(parents=True)
+    src = ROOT / "skills" / "grader" / "fixtures" / "sessions" / "weak_vague.jsonl"
+    (projects / "weak_vague.jsonl").write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT), "--root", str(tmp_path), "--limit", "30"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    data = json.loads(proc.stdout)
+    assert data["intake_path"] == "auto"
+    assert data["sessions_graded"] == 1
+    assert data["sessions"][0]["user_prompts"][0] == "fix it"

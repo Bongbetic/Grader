@@ -69,6 +69,27 @@ def select_recent_sessions(
     return ranked[:limit]
 
 
+def build_dossier_from_claude_root(
+    claude_root: Path, limit: int = DEFAULT_SESSION_LIMIT
+) -> dict[str, Any]:
+    found = discover_session_files(claude_root)
+    selected = select_recent_sessions(found, limit=limit)
+    dossier = empty_dossier("auto")
+    dossier["sessions_found"] = len(found)
+    notes: list[str] = []
+    sessions = []
+    for path in selected:
+        session = parse_session_jsonl(path)
+        for n in session.pop("_redaction_notes", []):
+            if n not in notes:
+                notes.append(n)
+        sessions.append(session)
+    dossier["sessions"] = sessions
+    dossier["sessions_graded"] = len(sessions)
+    dossier["redaction_notes"] = notes
+    return dossier
+
+
 def _content_to_text(content: Any) -> str | None:
     if isinstance(content, str):
         return content
