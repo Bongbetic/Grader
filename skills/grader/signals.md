@@ -1,8 +1,8 @@
 # Conversation efficacy signals
 
-Light **modifiers** to the checklist-based grade. Signals come from dossier `signals` fields (per session) and conversation patterns in `user_prompts[]`.
+Light **modifiers** to the checklist-based Skill letter. Signals come from dossier `signals` fields (per session) and conversation patterns in `user_prompts[]`.
 
-Signals are **not** a separate score. They corroborate or slightly adjust a letter already implied by checklist craft.
+Signals corroborate or slightly adjust the Skill letter already implied by checklist craft. Conversation efficacy is also reported under the separate Efficiency score; Efficiency does not prove craft quality by itself.
 
 ## Allowed signals
 
@@ -14,6 +14,10 @@ Use these when present in the dossier or evident from the transcript sample:
 | **Restates** | User repeats the same ask with little new information (high token overlap, similar length) | `signals.restates` |
 | **Clarify loops** | Assistant asks clarifying questions; user replies remain vague; pattern repeats | `signals.clarify_loops` |
 | **Abandoned goals** | Task dropped mid-thread without resolution — cancel/abort language or abrupt short final prompt after a long thread | `signals.abandoned_goal` |
+
+## Allowed efficacy signals
+
+Report prompts-per-task, single-shot completion, and rework rates as **conversation efficacy** under the separate Efficiency score. These signals can describe whether the conversation reached outcomes with fewer clarification/correction cycles, but they are never proof of good prompting craft alone.
 
 ### How to use modifiers
 
@@ -32,7 +36,7 @@ Do **not** use as grading inputs or report fields:
 - Model-tier comparisons framed as “efficiency”
 - Any metric that rewards brevity or punishes length without craft evidence
 
-If the user asks about cost/tokens, redirect: this grader assesses **prompting craft and conversation efficacy**, not resource usage.
+Forbidden efficiency framing includes token/cost/latency/cache narratives, model-tier “efficiency,” and any metric that rewards brevity without craft evidence. If the user asks about cost/tokens, redirect: this grader assesses **prompting craft and conversation efficacy**, not resource usage.
 
 ## Relationship to checklist
 
@@ -44,3 +48,7 @@ If the user asks about cost/tokens, redirect: this grader assesses **prompting c
 | Weak | High | C or one-step downgrade (e.g. B→C, C→D) when signals corroborate craft gaps |
 
 When in doubt, favor checklist evidence over signals.
+
+## Relationship to Efficiency
+
+Efficiency is a separate axis from Skill. Prompts-per-task, single-shot, and rework-rate evidence may support the Efficiency score and may lightly modify Skill only under the rules above; token, cost, latency, cache, and model-tier measures remain disallowed.
