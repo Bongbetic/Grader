@@ -173,6 +173,23 @@ def test_build_dossier_from_export_truncates_oversized_prompt():
     assert "truncated_prompt" in d["redaction_notes"]
 
 
+def test_build_dossier_from_export_stops_at_prompt_limit():
+    text = "\n\n".join([
+        "## session 2026-07-01T00:00:00Z\nUser: old-1\nUser: old-2\nUser: old-3",
+        "## session 2026-07-03T00:00:00Z\nUser: new-1\nUser: new-2\nUser: new-3",
+        "## session 2026-07-02T00:00:00Z\nUser: mid-1\nUser: mid-2\nUser: mid-3",
+    ])
+    d = build_dossier_from_export(text, prompt_limit=4)
+    assert d["prompts_sampled"] == 4
+    assert d["prompts_available"] == 9
+    assert d["sessions_scanned"] == 3
+    assert d["sessions_graded"] == 2
+    assert sum(s["prompt_count"] for s in d["sessions"]) == 4
+    assert d["sessions"][0]["user_prompts"] == ["new-1", "new-2", "new-3"]
+    assert d["sessions"][1]["user_prompts"] == ["mid-1"]
+    assert d["sessions"][1]["partial"] is True
+
+
 def test_build_dossier_skips_empty_sessions(tmp_path):
     projects = tmp_path / "projects" / "demo"
     projects.mkdir(parents=True)

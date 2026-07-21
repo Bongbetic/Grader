@@ -136,14 +136,46 @@ def _parse_turns(text: str) -> list[tuple[str, str]]:
     return turns
 
 
-def build_dossier_from_export(text: str, intake_path: str = "export") -> dict[str, Any]:
+_EXPORT_SESSION_RE = re.compile(r"(?im)^##\s+session\b[^\n]*$")
+_EXPORT_TIMESTAMP_RE = re.compile(
+    r"\b\d{4}-\d{2}-\d{2}(?:[T\s]\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?)?\b"
+)
+
+
+def _split_export_sessions(text: str) -> list[tuple[str | None, str]]:
+    matches = list(_EXPORT_SESSION_RE.finditer(text))
+    if not matches:
+        return [(None, text)]
+
+    chunks: list[tuple[str | None, str]] = []
+    prelude = text[: matches[0].start()].strip()
+    if prelude:
+        chunks.append((None, prelude))
+    for i, match in enumerate(matches):
+        start = match.end()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+        body = text[start:end].strip()
+        if body:
+            chunks.append((match.group(0), body))
+    return chunks or [(None, text)]
+
+
+def _export_order_timestamp(header: str | None, body: str) -> str | None:
+    haystack = "\n".join(part for part in [header, body[:1000]] if part)
+    match = _EXPORT_TIMESTAMP_RE.search(haystack)
+    return match.group(0).replace(" ", "T") if match else None
+
+
+def build_dossier_from_export(
+    text: str,
+    intake_path: str = "export",
+    prompt_limit: int = DEFAULT_PROMPT_LIMIT,
+) -> dict[str, Any]:
     dossier = empty_dossier(intake_path)
-    chunks = [c.strip() for c in re.split(r"(?im)^##\s+session\b[^\n]*$", text) if c.strip()]
-    if not chunks:
-        chunks = [text]
     notes: list[str] = []
-    sessions = []
-    for i, chunk in enumerate(chunks):
+    available_sessions: list[dict[str, Any]] = []
+    ordered_chunks = _split_export_sessions(text)
+    for i, (header, chunk) in enumerate(ordered_chunks):
         turns = _parse_turns(chunk)
         prompts: list[str] = []
         assistant_qs = 0
@@ -161,21 +193,47 @@ def build_dossier_from_export(text: str, intake_path: str = "export") -> dict[st
                 prompts.append(cleaned)
         if not prompts:
             continue
-        sessions.append({
+        started_at = _export_order_timestamp(header, chunk)
+        available_sessions.append({
             "session_id": f"export-{i+1}",
             "project_path": "export",
-            "started_at": None,
-            "ended_at": None,
+            "started_at": started_at,
+            "ended_at": started_at,
             "user_prompts": prompts,
             "prompt_count": len(prompts),
             "signals": compute_signals(prompts, assistant_qs),
         })
+
+    if available_sessions and all(s.get("started_at") for s in available_sessions):
+        available_sessions = sorted(
+            available_sessions,
+            key=lambda s: (str(s["started_at"]), str(s["session_id"])),
+            reverse=True,
+        )
+
+    sessions: list[dict[str, Any]] = []
+    prompts_sampled = 0
+    prompts_available = sum(s["prompt_count"] for s in available_sessions)
+    for session in available_sessions:
+        if prompts_sampled >= prompt_limit:
+            continue
+        remaining = prompt_limit - prompts_sampled
+        full_prompts = session["user_prompts"]
+        if len(full_prompts) > remaining:
+            session = dict(session)
+            session["user_prompts"] = full_prompts[:remaining]
+            session["prompt_count"] = len(session["user_prompts"])
+            session["partial"] = True
+            session["signals"] = compute_signals(session["user_prompts"])
+        prompts_sampled += session["prompt_count"]
+        sessions.append(session)
+
     dossier["sessions"] = sessions
-    dossier["sessions_found"] = len(sessions)
+    dossier["sessions_found"] = len(available_sessions)
     dossier["sessions_graded"] = len(sessions)
-    prompts_total = sum(s["prompt_count"] for s in sessions)
-    dossier["prompts_sampled"] = prompts_total
-    dossier["prompts_available"] = prompts_total
+    dossier["sessions_scanned"] = len(available_sessions)
+    dossier["prompts_sampled"] = prompts_sampled
+    dossier["prompts_available"] = prompts_available
     dossier["redaction_notes"] = notes
     return attach_efficiency(dossier)
 

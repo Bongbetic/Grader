@@ -7,7 +7,7 @@ Use this flow when the user asks for trends, progress, history, charts, a multi-
 From this skill directory, run:
 
 ```bash
-python scripts/render_trends.py --root ... --out trends.html
+python3 scripts/render_trends.py --root ... --out trends.html
 ```
 
 Use the actual Claude root for `--root` when known. If omitted, `render_trends.py` resolves the Claude root using `CLAUDE_CONFIG_DIR` or `~/.claude`.
@@ -29,7 +29,7 @@ Trends unlock after 5 completed Coach sessions. Completion is defined by `script
 To inspect status directly:
 
 ```bash
-python - <<'PY'
+python3 - <<'PY'
 import sys
 
 sys.path.insert(0, "scripts")

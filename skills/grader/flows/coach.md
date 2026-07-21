@@ -7,16 +7,16 @@ Use this flow when the user asks to be coached, trained, assessed live, or helpe
 From this skill directory, run the shared dig when host filesystem access is available:
 
 ```bash
-python scripts/extract_dossier.py --limit 100 --prompt-limit 100
+python3 scripts/extract_dossier.py --limit 100 --prompt-limit 100
 ```
 
 If local dig is unavailable, ask for `/export`, pasted prompts, or an uploaded transcript and use the export path:
 
 ```bash
-python scripts/extract_dossier.py --export /path/to/export.md
+python3 scripts/extract_dossier.py --export /path/to/export.md --prompt-limit 100
 ```
 
-Read `checklist.md` and `signals.md`. Score a concise baseline Prompt DNA from history, but keep the written summary brief: 3-5 bullets on prior DNA, strongest habits, and weakest habits.
+The export/paste fallback uses the same 100-prompt cap. Read `checklist.md` and `signals.md`. Score a concise baseline Prompt DNA from history, but keep the written summary brief: 3-5 bullets on prior DNA, strongest habits, and weakest habits.
 
 ## 2. Select the live assessment
 
@@ -25,7 +25,7 @@ Use the bundled coach task bank through `scripts/coach_tasks.py` and `references
 Example helper invocation from this directory:
 
 ```bash
-python - <<'PY'
+python3 - <<'PY'
 import sys
 
 sys.path.insert(0, "scripts")
@@ -71,7 +71,7 @@ In markdown, include a report card section that separates:
 Render:
 
 ```bash
-python scripts/render_report.py --in profile.json --out report.html
+python3 scripts/render_report.py --in profile.json --out report.html
 ```
 
 ## 4. Coach the weakest habits
