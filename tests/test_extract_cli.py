@@ -27,7 +27,17 @@ def test_cli_builds_dossier_from_fixture_tree(tmp_path):
     assert data["sessions"][0]["user_prompts"][0] == "fix it"
 
 
-def test_cli_builds_dossier_from_export_file():
+def test_cli_exits_2_when_no_sessions(tmp_path):
+    (tmp_path / "projects").mkdir()
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT), "--root", str(tmp_path)],
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 2
+
+
+def test_cli_export_path():
     export = ROOT / "skills" / "grader" / "fixtures" / "exports" / "weak_export.md"
     proc = subprocess.run(
         [sys.executable, str(SCRIPT), "--export", str(export)],
