@@ -2,6 +2,7 @@ from pathlib import Path
 
 import grader_lib
 from grader_lib import (
+    build_dossier_from_export,
     compute_signals,
     discover_session_files,
     parse_session_jsonl,
@@ -65,6 +66,17 @@ def test_parse_weak_session_extracts_user_prompts_only():
     assert session["user_prompts"] == ["fix it", "the bug"]
     assert session["prompt_count"] == 2
     assert session["started_at"].startswith("2026-07-01")
+
+
+def test_build_dossier_from_export_weak():
+    text = (
+        Path(__file__).resolve().parents[1]
+        / "skills/grader/fixtures/exports/weak_export.md"
+    ).read_text(encoding="utf-8")
+    d = build_dossier_from_export(text, intake_path="export")
+    assert d["intake_path"] == "export"
+    assert d["sessions_graded"] == 1
+    assert d["sessions"][0]["user_prompts"] == ["fix it", "the bug"]
 
 
 def test_discover_and_select_recent(tmp_path):

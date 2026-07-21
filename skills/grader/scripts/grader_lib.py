@@ -90,6 +90,61 @@ def build_dossier_from_claude_root(
     return dossier
 
 
+def _parse_turns(text: str) -> list[tuple[str, str]]:
+    matches = list(re.finditer(r"(?im)^(human|user|assistant|claude):\s*", text))
+    turns: list[tuple[str, str]] = []
+    for i, m in enumerate(matches):
+        role = m.group(1).lower()
+        start = m.end()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+        body = text[start:end].strip()
+        if role in {"human", "user"}:
+            turns.append(("user", body))
+        else:
+            turns.append(("assistant", body))
+    return turns
+
+
+def build_dossier_from_export(text: str, intake_path: str = "export") -> dict[str, Any]:
+    dossier = empty_dossier(intake_path)
+    chunks = [c.strip() for c in re.split(r"(?im)^##\s+session\b[^\n]*$", text) if c.strip()]
+    if not chunks:
+        chunks = [text]
+    notes: list[str] = []
+    sessions = []
+    for i, chunk in enumerate(chunks):
+        turns = _parse_turns(chunk)
+        prompts: list[str] = []
+        assistant_qs = 0
+        for role, body in turns:
+            if role == "assistant" and "?" in body:
+                assistant_qs += 1
+            if role == "user" and body.strip():
+                cleaned, n = redact_secrets(body)
+                for label in n:
+                    if label not in notes:
+                        notes.append(label)
+                if prompts and prompts[-1] == cleaned:
+                    continue
+                prompts.append(cleaned)
+        if not prompts:
+            continue
+        sessions.append({
+            "session_id": f"export-{i+1}",
+            "project_path": "export",
+            "started_at": None,
+            "ended_at": None,
+            "user_prompts": prompts,
+            "prompt_count": len(prompts),
+            "signals": compute_signals(prompts, assistant_qs),
+        })
+    dossier["sessions"] = sessions
+    dossier["sessions_found"] = len(sessions)
+    dossier["sessions_graded"] = len(sessions)
+    dossier["redaction_notes"] = notes
+    return dossier
+
+
 def _content_to_text(content: Any) -> str | None:
     if isinstance(content, str):
         return content

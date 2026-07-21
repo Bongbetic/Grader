@@ -25,3 +25,17 @@ def test_cli_builds_dossier_from_fixture_tree(tmp_path):
     assert data["intake_path"] == "auto"
     assert data["sessions_graded"] == 1
     assert data["sessions"][0]["user_prompts"][0] == "fix it"
+
+
+def test_cli_builds_dossier_from_export_file():
+    export = ROOT / "skills" / "grader" / "fixtures" / "exports" / "weak_export.md"
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT), "--export", str(export)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    data = json.loads(proc.stdout)
+    assert data["intake_path"] == "export"
+    assert data["sessions"][0]["prompt_count"] == 2
