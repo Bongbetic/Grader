@@ -1,0 +1,5 @@
+{"type":"user","timestamp":"2026-07-03T10:00:00.000Z","sessionId":"signals1","message":{"role":"user","content":"Add a login form with email and password"},"origin":{"kind":"human"}}
+{"type":"assistant","timestamp":"2026-07-03T10:00:05.000Z","sessionId":"signals1","message":{"role":"assistant","content":[{"type":"text","text":"Should I use OAuth or email/password?"}]}}
+{"type":"assistant","timestamp":"2026-07-03T10:00:10.000Z","sessionId":"signals1","message":{"role":"assistant","content":[{"type":"text","text":"Which framework do you prefer?"}]}}
+{"type":"user","timestamp":"2026-07-03T10:00:20.000Z","sessionId":"signals1","message":{"role":"user","content":"Add a login form with email and password fields"},"origin":{"kind":"human"}}
+{"type":"user","timestamp":"2026-07-03T10:00:40.000Z","sessionId":"signals1","message":{"role":"user","content":"No, wrong — use magic link auth instead"},"origin":{"kind":"human"}}
