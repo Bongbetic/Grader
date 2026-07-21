@@ -1,0 +1,175 @@
+[
+  {
+    "id": "easy-readme-quickstart-fix",
+    "complexity": "easy",
+    "title": "Repair a README quickstart",
+    "problem": "Ask an agent to inspect a small Python CLI repo where the README quickstart is stale, update the install and run commands, and verify the documented command works.",
+    "must_cover": [
+      "State the exact README section to update",
+      "Ask the agent to run the documented command after editing",
+      "Require a brief summary of what changed"
+    ],
+    "failure_modes": [
+      "Leaves commands vague or untestable",
+      "Asks for broad README rewrites unrelated to quickstart",
+      "Does not require verification"
+    ]
+  },
+  {
+    "id": "easy-ui-empty-state-copy",
+    "complexity": "easy",
+    "title": "Improve empty state copy",
+    "problem": "Ask an agent to update an existing dashboard empty state so it explains why no data appears and points users to the import action without changing layout behavior.",
+    "must_cover": [
+      "Identify the target empty state component or screen",
+      "Constrain the change to copy and existing UI primitives",
+      "Ask for a focused test or snapshot update if one exists"
+    ],
+    "failure_modes": [
+      "Requests a new design system or layout refactor",
+      "Omits the user action the copy should recommend",
+      "Ignores existing tests"
+    ]
+  },
+  {
+    "id": "easy-log-triage-summary",
+    "complexity": "easy",
+    "title": "Summarize a failing job log",
+    "problem": "Ask an agent to review a pasted CI log for a single failing lint job, identify the first actionable error, and propose the smallest code or config fix without editing files.",
+    "must_cover": [
+      "Specify that only the first actionable failure should be diagnosed",
+      "Ask for file and line references when available",
+      "Request a concise recommended next command"
+    ],
+    "failure_modes": [
+      "Summarizes every warning instead of the blocking error",
+      "Invents files not present in the log",
+      "Jumps to broad dependency upgrades"
+    ]
+  },
+  {
+    "id": "medium-pagination-regression",
+    "complexity": "medium",
+    "title": "Fix paginated API regression",
+    "problem": "Ask an agent to debug a REST endpoint that now repeats the last item on page two after a cursor-pagination refactor, add a regression test, and keep the public response schema unchanged.",
+    "must_cover": [
+      "Describe the observed duplicate-item behavior",
+      "Require a failing regression test before the fix",
+      "Preserve the existing response schema and cursor names",
+      "Run the endpoint test file after implementation"
+    ],
+    "failure_modes": [
+      "Changes API field names to make the test pass",
+      "Only tests the first page",
+      "Uses offset pagination instead of fixing cursor logic"
+    ]
+  },
+  {
+    "id": "medium-auth-copy-migration",
+    "complexity": "medium",
+    "title": "Migrate auth copy across locales",
+    "problem": "Ask an agent to replace 'magic link' with 'secure sign-in link' across login UI translations, preserving translation keys and updating any copy snapshot tests.",
+    "must_cover": [
+      "List the exact phrase replacement",
+      "Preserve locale keys and interpolation variables",
+      "Ask the agent to search for all affected locale files",
+      "Run relevant copy or snapshot tests"
+    ],
+    "failure_modes": [
+      "Renames translation keys unnecessarily",
+      "Misses interpolation placeholders",
+      "Updates only the default locale"
+    ]
+  },
+  {
+    "id": "medium-background-job-observability",
+    "complexity": "medium",
+    "title": "Add background job observability",
+    "problem": "Ask an agent to add structured logging to an invoice sync worker for start, success, retry, and permanent failure paths without logging customer secrets.",
+    "must_cover": [
+      "Name the worker and the four lifecycle events",
+      "Require structured fields such as job id and invoice count",
+      "Explicitly forbid customer secrets or tokens in logs",
+      "Ask for tests or documented manual verification"
+    ],
+    "failure_modes": [
+      "Logs raw payloads containing sensitive data",
+      "Adds unstructured print statements",
+      "Covers only the success path"
+    ]
+  },
+  {
+    "id": "medium-product-spec-gap-analysis",
+    "complexity": "medium",
+    "title": "Compare implementation to product spec",
+    "problem": "Ask an agent to compare a finished settings-page branch against a short product spec, identify missing acceptance criteria, and produce a prioritized punch list without changing code.",
+    "must_cover": [
+      "Point to the spec and implemented settings page",
+      "Separate confirmed gaps from questions",
+      "Prioritize by user impact or release risk",
+      "Avoid code edits unless explicitly approved later"
+    ],
+    "failure_modes": [
+      "Starts implementing fixes immediately",
+      "Mixes speculation with confirmed gaps",
+      "Does not map findings back to acceptance criteria"
+    ]
+  },
+  {
+    "id": "hard-multi-service-rate-limit",
+    "complexity": "hard",
+    "title": "Implement multi-service rate limiting",
+    "problem": "Ask an agent to add per-tenant rate limiting that is enforced consistently in the web API and async import worker, backed by the existing Redis client, with tests for burst and reset behavior.",
+    "must_cover": [
+      "Require inspection of both API and worker entry points",
+      "Use the existing Redis abstraction rather than adding a new service",
+      "Define burst and reset-window expectations",
+      "Include tests for both synchronous and async paths",
+      "Preserve current error response format"
+    ],
+    "failure_modes": [
+      "Implements limiting in only one service path",
+      "Adds an unrelated dependency or storage layer",
+      "Breaks existing error contracts",
+      "Creates flaky time-dependent tests"
+    ]
+  },
+  {
+    "id": "hard-legacy-data-backfill-plan",
+    "complexity": "hard",
+    "title": "Plan a legacy data backfill",
+    "problem": "Ask an agent to design a safe backfill for legacy customer records missing normalized timezone fields, including dry-run reporting, rollback considerations, and rollout checkpoints before code changes.",
+    "must_cover": [
+      "Ask for a read-only data shape assessment first",
+      "Require dry-run counts and sample diffs",
+      "Include rollback or remediation strategy",
+      "Define staged rollout checkpoints",
+      "Separate design output from implementation"
+    ],
+    "failure_modes": [
+      "Writes a migration before assessing data shape",
+      "Omits dry-run or rollback planning",
+      "Assumes all records can be updated in one batch",
+      "Does not call out ambiguous timezone sources"
+    ]
+  },
+  {
+    "id": "hard-cross-platform-cache-bug",
+    "complexity": "hard",
+    "title": "Debug cross-platform cache invalidation",
+    "problem": "Ask an agent to diagnose a cache invalidation bug that appears only on Windows paths in a monorepo build tool, add a platform-safe regression test, and avoid rewriting the cache subsystem.",
+    "must_cover": [
+      "Describe the Windows-only stale-cache symptom",
+      "Ask the agent to inspect path normalization boundaries",
+      "Require a regression test that is stable on non-Windows CI",
+      "Constrain the fix to cache key or path handling",
+      "Run the targeted build-tool test suite"
+    ],
+    "failure_modes": [
+      "Rewrites the cache subsystem broadly",
+      "Adds a test that only passes on Windows",
+      "Normalizes paths in a way that breaks POSIX behavior",
+      "Ignores existing cache-key compatibility"
+    ]
+  }
+]
