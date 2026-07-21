@@ -20,8 +20,8 @@ def history_path(claude_root: Path | None = None) -> Path:
 
 def is_coach_completion(record: dict[str, Any]) -> bool:
     return bool(
-        record.get("completed")
-        and record.get("live_assessment_finished")
+        record.get("completed") is True
+        and record.get("live_assessment_finished") is True
         and int(record.get("coaching_drill_rounds") or 0) >= 1
     )
 
