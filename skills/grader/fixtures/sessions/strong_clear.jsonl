@@ -1,0 +1,1 @@
+{"type":"user","timestamp":"2026-07-02T10:00:00.000Z","sessionId":"strong1","message":{"role":"user","content":"Add a --json flag to scripts/extract_dossier.py that prints the dossier to stdout. Success: pytest tests/test_extract_cli.py passes. Do not change checklist.md."},"origin":{"kind":"human"}}
