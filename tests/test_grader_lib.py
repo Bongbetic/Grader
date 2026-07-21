@@ -1,7 +1,10 @@
+import json
 from pathlib import Path
 
 import grader_lib
 from grader_lib import (
+    MAX_PROMPT_CHARS,
+    build_dossier_from_claude_root,
     build_dossier_from_export,
     compute_signals,
     discover_session_files,
@@ -9,6 +12,7 @@ from grader_lib import (
     redact_secrets,
     resolve_claude_root,
     select_recent_sessions,
+    truncate_prompt,
 )
 
 FIXTURES = Path(__file__).resolve().parents[1] / "skills" / "grader" / "fixtures" / "sessions"
@@ -77,6 +81,66 @@ def test_build_dossier_from_export_weak():
     assert d["intake_path"] == "export"
     assert d["sessions_graded"] == 1
     assert d["sessions"][0]["user_prompts"] == ["fix it", "the bug"]
+
+
+def test_truncate_prompt_leaves_short_text():
+    text = "short prompt"
+    out, notes = truncate_prompt(text)
+    assert out == text
+    assert notes == []
+
+
+def test_truncate_prompt_caps_long_text():
+    text = "x" * (MAX_PROMPT_CHARS + 500)
+    out, notes = truncate_prompt(text)
+    assert out.endswith(" …[truncated]")
+    assert len(out) == MAX_PROMPT_CHARS + len(" …[truncated]")
+    assert out[:MAX_PROMPT_CHARS] == "x" * MAX_PROMPT_CHARS
+    assert notes == ["truncated_prompt"]
+
+
+def test_parse_session_truncates_oversized_prompt(tmp_path):
+    long_body = "a" * (MAX_PROMPT_CHARS + 100)
+    path = tmp_path / "big.jsonl"
+    path.write_text(
+        json.dumps({
+            "type": "user",
+            "message": {"role": "user", "content": long_body},
+            "timestamp": "2026-07-01T00:00:00Z",
+        }) + "\n",
+        encoding="utf-8",
+    )
+    session = parse_session_jsonl(path)
+    assert session["prompt_count"] == 1
+    assert session["user_prompts"][0].endswith(" …[truncated]")
+    assert "truncated_prompt" in session["_redaction_notes"]
+
+
+def test_build_dossier_from_export_truncates_oversized_prompt():
+    long_body = "b" * (MAX_PROMPT_CHARS + 100)
+    text = f"## session export-1\n\nuser: {long_body}\n"
+    d = build_dossier_from_export(text)
+    assert d["sessions_graded"] == 1
+    assert d["sessions"][0]["user_prompts"][0].endswith(" …[truncated]")
+    assert "truncated_prompt" in d["redaction_notes"]
+
+
+def test_build_dossier_skips_empty_sessions(tmp_path):
+    projects = tmp_path / "projects" / "demo"
+    projects.mkdir(parents=True)
+    empty = projects / "empty.jsonl"
+    empty.write_text(
+        json.dumps({"type": "assistant", "message": {"role": "assistant", "content": "hi"}}) + "\n",
+        encoding="utf-8",
+    )
+    nonempty = projects / "weak.jsonl"
+    src = FIXTURES / "weak_vague.jsonl"
+    nonempty.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+    d = build_dossier_from_claude_root(tmp_path, limit=30)
+    assert d["sessions_found"] == 2
+    assert d["sessions_graded"] == 1
+    assert len(d["sessions"]) == 1
+    assert d["sessions"][0]["prompt_count"] == 2
 
 
 def test_discover_and_select_recent(tmp_path):

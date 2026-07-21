@@ -8,6 +8,8 @@ from pathlib import Path
 from typing import Any
 
 DEFAULT_SESSION_LIMIT = 30
+MAX_PROMPT_CHARS = 4000
+_TRUNCATED_SUFFIX = " …[truncated]"
 
 _SECRET_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("anthropic_key", re.compile(r"sk-ant-[A-Za-z0-9_-]{20,}")),
@@ -26,6 +28,12 @@ def redact_secrets(text: str) -> tuple[str, list[str]]:
             if label not in notes:
                 notes.append(label)
     return out, notes
+
+
+def truncate_prompt(text: str) -> tuple[str, list[str]]:
+    if len(text) <= MAX_PROMPT_CHARS:
+        return text, []
+    return text[:MAX_PROMPT_CHARS] + _TRUNCATED_SUFFIX, ["truncated_prompt"]
 
 
 def empty_dossier(intake_path: str) -> dict[str, Any]:
@@ -80,6 +88,8 @@ def build_dossier_from_claude_root(
     sessions = []
     for path in selected:
         session = parse_session_jsonl(path)
+        if session["prompt_count"] == 0:
+            continue
         for n in session.pop("_redaction_notes", []):
             if n not in notes:
                 notes.append(n)
@@ -121,7 +131,8 @@ def build_dossier_from_export(text: str, intake_path: str = "export") -> dict[st
                 assistant_qs += 1
             if role == "user" and body.strip():
                 cleaned, n = redact_secrets(body)
-                for label in n:
+                cleaned, tnotes = truncate_prompt(cleaned)
+                for label in n + tnotes:
                     if label not in notes:
                         notes.append(label)
                 if prompts and prompts[-1] == cleaned:
@@ -240,7 +251,8 @@ def parse_session_jsonl(path: Path) -> dict[str, Any]:
             if not text or not str(text).strip():
                 continue
             cleaned, notes = redact_secrets(str(text))
-            redaction_notes.extend(n for n in notes if n not in redaction_notes)
+            cleaned, tnotes = truncate_prompt(cleaned)
+            redaction_notes.extend(n for n in notes + tnotes if n not in redaction_notes)
             if prompts and prompts[-1] == cleaned:
                 continue
             prompts.append(cleaned)
