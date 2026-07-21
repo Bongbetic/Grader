@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "flow": "grade",
+    "intake_path": "fixture",
+    "prompts_sampled": 4,
+    "prompts_available": 4,
+    "sessions_scanned": 1
+  },
+  "dna": [
+    {
+      "id": "clarity",
+      "label": "Clarity",
+      "score": 4,
+      "verdict": "Too many prompts leave the target behavior implicit.",
+      "evidence": ["fix it"]
+    },
+    {
+      "id": "constraints",
+      "label": "Constraints",
+      "score": 3,
+      "verdict": "Constraints are usually missing.",
+      "evidence": ["make it better"]
+    }
+  ],
+  "scores": {
+    "skill": "B",
+    "efficiency": "C",
+    "consistency": "B"
+  },
+  "efficiency": {
+    "prompts_per_task_mean": 2.0,
+    "single_shot_rate": 0.5,
+    "rework_rate": 0.25
+  },
+  "habits": [
+    "Add acceptance criteria before asking the agent to edit code."
+  ],
+  "learning_cards": [
+    {
+      "title": "State the finish line",
+      "body": "Name the user-visible outcome and the verification command."
+    }
+  ],
+  "practice_pack": [],
+  "live_assessment": null,
+  "overall_letter": "B"
+}

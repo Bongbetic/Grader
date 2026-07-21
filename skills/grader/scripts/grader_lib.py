@@ -7,7 +7,9 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-DEFAULT_SESSION_LIMIT = 30
+DEFAULT_SESSION_LIMIT = 100
+DEFAULT_PROMPT_LIMIT = 100
+TASK_CONTINUITY_THRESHOLD: float = 0.3
 MAX_PROMPT_CHARS = 4000
 _TRUNCATED_SUFFIX = " …[truncated]"
 
@@ -78,26 +80,45 @@ def select_recent_sessions(
 
 
 def build_dossier_from_claude_root(
-    claude_root: Path, limit: int = DEFAULT_SESSION_LIMIT
+    claude_root: Path,
+    session_limit: int = DEFAULT_SESSION_LIMIT,
+    prompt_limit: int = DEFAULT_PROMPT_LIMIT,
 ) -> dict[str, Any]:
     found = discover_session_files(claude_root)
-    selected = select_recent_sessions(found, limit=limit)
+    selected = select_recent_sessions(found, limit=session_limit)
     dossier = empty_dossier("auto")
     dossier["sessions_found"] = len(found)
     notes: list[str] = []
-    sessions = []
+    sessions: list[dict[str, Any]] = []
+    prompts_sampled = 0
+    prompts_available = 0
     for path in selected:
         session = parse_session_jsonl(path)
+        prompts_available += session["prompt_count"]
         if session["prompt_count"] == 0:
             continue
+        if prompts_sampled >= prompt_limit:
+            continue
+        remaining = prompt_limit - prompts_sampled
+        full_prompts = session["user_prompts"]
+        if len(full_prompts) > remaining:
+            session = dict(session)
+            session["user_prompts"] = full_prompts[:remaining]
+            session["prompt_count"] = len(session["user_prompts"])
+            session["partial"] = True
+            session["signals"] = compute_signals(session["user_prompts"])
         for n in session.pop("_redaction_notes", []):
             if n not in notes:
                 notes.append(n)
+        prompts_sampled += session["prompt_count"]
         sessions.append(session)
     dossier["sessions"] = sessions
     dossier["sessions_graded"] = len(sessions)
+    dossier["sessions_scanned"] = len(selected)
+    dossier["prompts_sampled"] = prompts_sampled
+    dossier["prompts_available"] = prompts_available
     dossier["redaction_notes"] = notes
-    return dossier
+    return attach_efficiency(dossier)
 
 
 def _parse_turns(text: str) -> list[tuple[str, str]]:
@@ -115,14 +136,46 @@ def _parse_turns(text: str) -> list[tuple[str, str]]:
     return turns
 
 
-def build_dossier_from_export(text: str, intake_path: str = "export") -> dict[str, Any]:
+_EXPORT_SESSION_RE = re.compile(r"(?im)^##\s+session\b[^\n]*$")
+_EXPORT_TIMESTAMP_RE = re.compile(
+    r"\b\d{4}-\d{2}-\d{2}(?:[T\s]\d{2}:\d{2}:\d{2}(?:\.\d+)?Z?)?\b"
+)
+
+
+def _split_export_sessions(text: str) -> list[tuple[str | None, str]]:
+    matches = list(_EXPORT_SESSION_RE.finditer(text))
+    if not matches:
+        return [(None, text)]
+
+    chunks: list[tuple[str | None, str]] = []
+    prelude = text[: matches[0].start()].strip()
+    if prelude:
+        chunks.append((None, prelude))
+    for i, match in enumerate(matches):
+        start = match.end()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+        body = text[start:end].strip()
+        if body:
+            chunks.append((match.group(0), body))
+    return chunks or [(None, text)]
+
+
+def _export_order_timestamp(header: str | None, body: str) -> str | None:
+    haystack = "\n".join(part for part in [header, body[:1000]] if part)
+    match = _EXPORT_TIMESTAMP_RE.search(haystack)
+    return match.group(0).replace(" ", "T") if match else None
+
+
+def build_dossier_from_export(
+    text: str,
+    intake_path: str = "export",
+    prompt_limit: int = DEFAULT_PROMPT_LIMIT,
+) -> dict[str, Any]:
     dossier = empty_dossier(intake_path)
-    chunks = [c.strip() for c in re.split(r"(?im)^##\s+session\b[^\n]*$", text) if c.strip()]
-    if not chunks:
-        chunks = [text]
     notes: list[str] = []
-    sessions = []
-    for i, chunk in enumerate(chunks):
+    available_sessions: list[dict[str, Any]] = []
+    ordered_chunks = _split_export_sessions(text)
+    for i, (header, chunk) in enumerate(ordered_chunks):
         turns = _parse_turns(chunk)
         prompts: list[str] = []
         assistant_qs = 0
@@ -140,20 +193,49 @@ def build_dossier_from_export(text: str, intake_path: str = "export") -> dict[st
                 prompts.append(cleaned)
         if not prompts:
             continue
-        sessions.append({
+        started_at = _export_order_timestamp(header, chunk)
+        available_sessions.append({
             "session_id": f"export-{i+1}",
             "project_path": "export",
-            "started_at": None,
-            "ended_at": None,
+            "started_at": started_at,
+            "ended_at": started_at,
             "user_prompts": prompts,
             "prompt_count": len(prompts),
             "signals": compute_signals(prompts, assistant_qs),
         })
+
+    if available_sessions and all(s.get("started_at") for s in available_sessions):
+        available_sessions = sorted(
+            available_sessions,
+            key=lambda s: (str(s["started_at"]), str(s["session_id"])),
+            reverse=True,
+        )
+
+    sessions: list[dict[str, Any]] = []
+    prompts_sampled = 0
+    prompts_available = sum(s["prompt_count"] for s in available_sessions)
+    for session in available_sessions:
+        if prompts_sampled >= prompt_limit:
+            continue
+        remaining = prompt_limit - prompts_sampled
+        full_prompts = session["user_prompts"]
+        if len(full_prompts) > remaining:
+            session = dict(session)
+            session["user_prompts"] = full_prompts[:remaining]
+            session["prompt_count"] = len(session["user_prompts"])
+            session["partial"] = True
+            session["signals"] = compute_signals(session["user_prompts"])
+        prompts_sampled += session["prompt_count"]
+        sessions.append(session)
+
     dossier["sessions"] = sessions
-    dossier["sessions_found"] = len(sessions)
+    dossier["sessions_found"] = len(available_sessions)
     dossier["sessions_graded"] = len(sessions)
+    dossier["sessions_scanned"] = len(available_sessions)
+    dossier["prompts_sampled"] = prompts_sampled
+    dossier["prompts_available"] = prompts_available
     dossier["redaction_notes"] = notes
-    return dossier
+    return attach_efficiency(dossier)
 
 
 def _content_to_text(content: Any) -> str | None:
@@ -213,6 +295,92 @@ def compute_signals(user_prompts: list[str], assistant_questions: int = 0) -> di
         "clarify_loops": clarify_loops,
         "abandoned_goal": abandoned,
     }
+
+
+def segment_tasks(user_prompts: list[str]) -> list[dict[str, Any]]:
+    if not user_prompts:
+        return []
+    tasks: list[dict[str, Any]] = []
+    start = 0
+    for i in range(1, len(user_prompts)):
+        prev, cur = user_prompts[i - 1], user_prompts[i]
+        overlap = _jaccard(_tokens(prev), _tokens(cur))
+        is_correction = bool(_CORRECTION_RE.search(cur))
+        is_restate = overlap >= 0.8
+        continuous = overlap >= TASK_CONTINUITY_THRESHOLD or is_correction or is_restate
+        if not continuous:
+            chunk = user_prompts[start:i]
+            tasks.append(_task_from_prompts(chunk, list(range(start, i))))
+            start = i
+    chunk = user_prompts[start:]
+    tasks.append(_task_from_prompts(chunk, list(range(start, len(user_prompts)))))
+    return tasks
+
+
+def _task_from_prompts(prompts: list[str], indices: list[int]) -> dict[str, Any]:
+    signals = compute_signals(prompts)
+    resolved = not (
+        bool(prompts and _ABORT_RE.search(prompts[-1]))
+        or (len(prompts) >= 3 and len(prompts[-1].strip()) < 12)
+    )
+    return {
+        "prompt_indices": indices,
+        "prompts": prompts,
+        "prompt_count": len(prompts),
+        "corrections": signals["corrections"],
+        "restates": signals["restates"],
+        "resolved": resolved,
+    }
+
+
+def compute_efficiency(tasks: list[dict[str, Any]]) -> dict[str, Any]:
+    if not tasks:
+        return {
+            "prompts_per_task_mean": 0.0,
+            "prompts_per_task_median": 0.0,
+            "single_shot_rate": 0.0,
+            "rework_rate": 0.0,
+            "tasks": [],
+            "worst_task": None,
+        }
+    counts = [t["prompt_count"] for t in tasks]
+    mean = sum(counts) / len(counts)
+    sorted_counts = sorted(counts)
+    mid = len(sorted_counts) // 2
+    median = (
+        sorted_counts[mid]
+        if len(sorted_counts) % 2 == 1
+        else (sorted_counts[mid - 1] + sorted_counts[mid]) / 2
+    )
+    single = sum(1 for c in counts if c == 1) / len(counts)
+    rework = sum(1 for t in tasks if (t["corrections"] + t["restates"]) >= 1) / len(counts)
+    summaries = [
+        {
+            "prompt_count": t["prompt_count"],
+            "corrections": t["corrections"],
+            "restates": t["restates"],
+            "resolved": t["resolved"],
+            "prompt_indices": t["prompt_indices"],
+        }
+        for t in tasks
+    ]
+    worst = max(summaries, key=lambda s: s["prompt_count"])
+    return {
+        "prompts_per_task_mean": mean,
+        "prompts_per_task_median": float(median),
+        "single_shot_rate": single,
+        "rework_rate": rework,
+        "tasks": summaries,
+        "worst_task": worst,
+    }
+
+
+def attach_efficiency(dossier: dict[str, Any]) -> dict[str, Any]:
+    flat: list[str] = []
+    for session in dossier.get("sessions", []):
+        flat.extend(session.get("user_prompts") or [])
+    dossier["efficiency"] = compute_efficiency(segment_tasks(flat))
+    return dossier
 
 
 def parse_session_jsonl(path: Path) -> dict[str, Any]:
