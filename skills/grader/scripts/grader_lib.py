@@ -177,16 +177,20 @@ def _jaccard(a: set[str], b: set[str]) -> float:
 
 
 def compute_signals(user_prompts: list[str], assistant_questions: int = 0) -> dict[str, Any]:
+    # corrections: user pushes back on misunderstanding (see signals.md)
     corrections = sum(1 for p in user_prompts if _CORRECTION_RE.search(p))
+    # restates: high token Jaccard + similar length vs previous prompt
     restates = 0
     for i in range(1, len(user_prompts)):
         prev, cur = user_prompts[i - 1], user_prompts[i]
         if _jaccard(_tokens(prev), _tokens(cur)) >= 0.8:
             if abs(len(prev) - len(cur)) <= max(10, int(0.3 * max(len(prev), len(cur)))):
                 restates += 1
+    # clarify_loops: assistant asked 2+ questions; user replies still short/vague
     clarify_loops = 0
     if assistant_questions >= 2:
         clarify_loops = sum(1 for p in user_prompts if len(p.strip()) < 40)
+    # abandoned_goal: explicit abort language or abrupt short final prompt
     abandoned = False
     if user_prompts and _ABORT_RE.search(user_prompts[-1]):
         abandoned = True
