@@ -7,16 +7,16 @@ Use this flow when the user asks to practice prompting, wants exercises, wants d
 From this skill directory, run the shared dig when host filesystem access is available:
 
 ```bash
-python scripts/extract_dossier.py --limit 100 --prompt-limit 100
+python3 scripts/extract_dossier.py --limit 100 --prompt-limit 100
 ```
 
 If local dig is unavailable, ask for `/export`, pasted prompts, or a few representative prompts. For an export file:
 
 ```bash
-python scripts/extract_dossier.py --export /path/to/export.md
+python3 scripts/extract_dossier.py --export /path/to/export.md --prompt-limit 100
 ```
 
-Read `checklist.md` and `signals.md`, then identify the weakest applicable DNA dimensions. Do not use forbidden token/cost/latency/cache metrics.
+The export/paste fallback uses the same 100-prompt cap. Read `checklist.md` and `signals.md`, then identify the weakest applicable DNA dimensions. Do not use forbidden token/cost/latency/cache metrics.
 
 ## 2. Choose practice targets
 

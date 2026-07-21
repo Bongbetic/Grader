@@ -36,7 +36,7 @@ The overall A-D letter is still emitted, but it is a side effect of the richer P
 On Claude Code, `/grader` first tries to dig local Claude Code sessions:
 
 ```bash
-python scripts/extract_dossier.py --limit 100 --prompt-limit 100
+python3 scripts/extract_dossier.py --limit 100 --prompt-limit 100
 ```
 
 That samples up to 100 prompts from recent sessions and builds a compact dossier with user prompts, light conversation efficacy signals, redaction notes, and coverage metadata.
@@ -44,10 +44,10 @@ That samples up to 100 prompts from recent sessions and builds a compact dossier
 When local history is unavailable, `/grader` uses a fallback intake:
 
 ```bash
-python scripts/extract_dossier.py --export /path/to/export.md
+python3 scripts/extract_dossier.py --export /path/to/export.md --prompt-limit 100
 ```
 
-The fallback accepts Claude Code `/export` output, uploaded transcript files, or pasted chat turns.
+The fallback accepts Claude Code `/export` output, uploaded transcript files, or pasted chat turns, capped at the same 100-prompt sample.
 
 ### Prompting Profile
 
@@ -67,13 +67,13 @@ The profile includes:
 Profile HTML is rendered with:
 
 ```bash
-python scripts/render_report.py --in profile.json --out report.html
+python3 scripts/render_report.py --in profile.json --out report.html
 ```
 
 Trends HTML is rendered with:
 
 ```bash
-python scripts/render_trends.py --root ... --out trends.html
+python3 scripts/render_trends.py --root ... --out trends.html
 ```
 
 Coach history is stored locally at:
@@ -326,7 +326,7 @@ test -f "$ZIP_OUT"
 
 ### Claude Desktop / claude.ai upload
 
-1. Build `grader.zip` with `python skills/grader/scripts/package_for_desktop.py --out <path-to-grader.zip>`.
+1. Build `grader.zip` with `python3 skills/grader/scripts/package_for_desktop.py --out <path-to-grader.zip>` on macOS/Linux, or `python skills/grader/scripts/package_for_desktop.py --out <path-to-grader.zip>` on Windows.
 2. In Claude Desktop or claude.ai, enable code execution and file creation.
 3. Go to Customize -> Skills -> Upload a skill.
 4. Choose `grader.zip`.
@@ -350,13 +350,17 @@ Agent goals:
 
 Agent steps:
 
-1. Confirm Python 3.11+ is available.
+1. Confirm Python 3.11+ is available (`python3` on macOS/Linux, `python` on Windows).
 2. Clone `https://github.com/Bongbetic/Grader.git` or use the current repository.
-3. Run `python -m pip install -r requirements.txt` or `python3 -m pip install -r requirements.txt`.
+3. Install test dependencies:
+   - macOS/Linux: `python3 -m pip install -r requirements.txt`
+   - Windows: `python -m pip install -r requirements.txt`
 4. Copy `skills/grader/` to the user's Claude Code personal skills directory:
    - Windows: `%USERPROFILE%\.claude\skills\grader\`
    - macOS/Linux: `~/.claude/skills/grader/`
-5. Run `python skills/grader/scripts/package_for_desktop.py --out <download-folder>/grader.zip`.
+5. Build the Desktop ZIP:
+   - macOS/Linux: `python3 skills/grader/scripts/package_for_desktop.py --out <download-folder>/grader.zip`
+   - Windows: `python skills/grader/scripts/package_for_desktop.py --out <download-folder>/grader.zip`
 6. Verify the success criteria below.
 7. Tell the user:
    - Claude Code: run `/grader`.
@@ -397,28 +401,28 @@ If clone fails, retry once with plain HTTPS. If it still fails, report the exact
 Install test dependencies:
 
 ```bash
-python -m pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 ```
 
 Run tests:
 
 ```bash
-python -m pytest -v
+python3 -m pytest -v
 ```
 
 Build the Desktop ZIP:
 
 ```bash
-python skills/grader/scripts/package_for_desktop.py
+python3 skills/grader/scripts/package_for_desktop.py
 ```
 
 Try the core CLIs from the skill directory:
 
 ```bash
 cd skills/grader
-python scripts/extract_dossier.py --limit 100 --prompt-limit 100
-python scripts/render_report.py --in profile.json --out report.html
-python scripts/render_trends.py --root "$HOME/.claude" --out trends.html
+python3 scripts/extract_dossier.py --limit 100 --prompt-limit 100
+python3 scripts/render_report.py --in profile.json --out report.html
+python3 scripts/render_trends.py --root "$HOME/.claude" --out trends.html
 ```
 
-The render commands require suitable input files/history. If local Claude Code history is missing, use an export file with `extract_dossier.py --export`.
+The render commands require suitable input files/history. If local Claude Code history is missing, use an export file with `extract_dossier.py --export /path/to/export.md --prompt-limit 100`.

@@ -45,7 +45,7 @@ When multiple intents appear, prefer the most specific active request: Trends > 
 Only when host filesystem access is available. From this skill directory:
 
 ```bash
-python scripts/extract_dossier.py --limit 100 --prompt-limit 100
+python3 scripts/extract_dossier.py --limit 100 --prompt-limit 100
 ```
 
 Windows tip: if console encoding errors, set `PYTHONIOENCODING=utf-8` or write `--out dossier.json`.
@@ -61,12 +61,12 @@ Ask the user for recent prompts via:
 Then either:
 
 ```bash
-python scripts/extract_dossier.py --export /path/to/export.md
+python3 scripts/extract_dossier.py --export /path/to/export.md --prompt-limit 100
 ```
 
 Or, if Python/scripts are unavailable: parse user turns into the same logical dossier shape (`sessions[]` with `user_prompts` + light signals) using the rules in `scripts/grader_lib.py` / this skill, then continue.
 
-Mark `intake_path` as `export` or `paste`. Report coverage using `prompts_sampled`, `prompts_available`, `sessions_scanned`, and `sessions_graded` from the dossier.
+The export/paste path is capped at the same 100-prompt sample as Path A. Mark `intake_path` as `export` or `paste`. Report coverage using `prompts_sampled`, `prompts_available`, `sessions_scanned`, and `sessions_graded` from the dossier.
 
 ### 3. Follow the selected flow
 
@@ -84,13 +84,13 @@ All grading flows must read `checklist.md` and `signals.md` before scoring.
 Prompting Profile HTML:
 
 ```bash
-python scripts/render_report.py --in profile.json --out report.html
+python3 scripts/render_report.py --in profile.json --out report.html
 ```
 
 Trends HTML:
 
 ```bash
-python scripts/render_trends.py --root ... --out trends.html
+python3 scripts/render_trends.py --root ... --out trends.html
 ```
 
 Use the actual Claude root for `--root` when known. If it is omitted, scripts resolve `CLAUDE_CONFIG_DIR` or `~/.claude`.

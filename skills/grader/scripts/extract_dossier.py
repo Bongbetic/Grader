@@ -34,7 +34,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"Export file not found: {args.export}", file=sys.stderr)
             return 2
         text = args.export.read_text(encoding="utf-8")
-        dossier = build_dossier_from_export(text, intake_path="export")
+        dossier = build_dossier_from_export(
+            text,
+            intake_path="export",
+            prompt_limit=args.prompt_limit,
+        )
         if dossier["sessions_graded"] == 0:
             print("No sessions found to grade", file=sys.stderr)
             return 2

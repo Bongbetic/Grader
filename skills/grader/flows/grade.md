@@ -7,16 +7,16 @@ Use this flow for the default `/grader` intent: grade the user's historical prom
 From this skill directory, prefer the local Claude Code dig when host filesystem access is available:
 
 ```bash
-python scripts/extract_dossier.py --limit 100 --prompt-limit 100
+python3 scripts/extract_dossier.py --limit 100 --prompt-limit 100
 ```
 
 If the host Claude root is unavailable, ask for a Claude Code `/export`, pasted transcript, or uploaded export file, then run:
 
 ```bash
-python scripts/extract_dossier.py --export /path/to/export.md
+python3 scripts/extract_dossier.py --export /path/to/export.md --prompt-limit 100
 ```
 
-If scripts are unavailable, construct the same logical dossier manually: `sessions[]` with `user_prompts`, `signals`, `prompts_sampled`, `prompts_available`, `sessions_scanned`, and `intake_path`.
+The export/paste fallback uses the same 100-prompt cap. If scripts are unavailable, construct the same logical dossier manually: `sessions[]` with `user_prompts`, `signals`, `prompts_sampled`, `prompts_available`, `sessions_scanned`, and `intake_path`.
 
 ## 2. Read the grading sources
 
@@ -78,7 +78,7 @@ Emit exactly one overall letter grade as a side effect of the profile. Keep the 
 Render the profile:
 
 ```bash
-python scripts/render_report.py --in profile.json --out report.html
+python3 scripts/render_report.py --in profile.json --out report.html
 ```
 
 Tell the user where `profile.json` and `report.html` were written. If rendering fails, still provide the markdown report and mention the render error.

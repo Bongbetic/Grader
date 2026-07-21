@@ -49,3 +49,25 @@ def test_cli_export_path():
     data = json.loads(proc.stdout)
     assert data["intake_path"] == "export"
     assert data["sessions"][0]["prompt_count"] == 2
+
+
+def test_cli_export_path_respects_prompt_limit(tmp_path):
+    export = tmp_path / "many_export.md"
+    export.write_text(
+        "\n\n".join([
+            "## session 2026-07-01T00:00:00Z\nUser: old-1\nUser: old-2\nUser: old-3",
+            "## session 2026-07-02T00:00:00Z\nUser: new-1\nUser: new-2\nUser: new-3",
+        ]),
+        encoding="utf-8",
+    )
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT), "--export", str(export), "--prompt-limit", "4"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    data = json.loads(proc.stdout)
+    assert data["prompts_sampled"] == 4
+    assert data["prompts_available"] == 6
+    assert data["sessions_scanned"] == 2
