@@ -1,0 +1,12 @@
+# Grader — Python dependencies
+#
+# Runtime (extract_dossier / grader_lib): Python 3.11+ standard library only.
+# No third-party packages are required to dig sessions or build dossiers.
+#
+# Install (agents should run this after clone):
+#   pip install -r requirements.txt
+#
+# Optional: run the test suite after install:
+#   python -m pytest -v
+
+pytest>=8.0

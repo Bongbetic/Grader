@@ -1,1 +1,2 @@
-pytest>=8.0
+# Alias for tools that look for requirements-dev.txt
+-r requirements.txt

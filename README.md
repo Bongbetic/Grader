@@ -31,10 +31,11 @@ The Claude Code directory name **must** be exactly `grader` (that becomes `/grad
 ### Steps (run all)
 
 1. Clone this repo into a temp directory (or use the current workspace if it already *is* this repo).
-2. **Claude Code:** copy `skills/grader/` into the personal skills path (overwrite if present).
-3. **Desktop ZIP:** run `python skills/grader/scripts/package_for_desktop.py` and note the printed zip path (default `dist/grader.zip`).
-4. Verify `SKILL.md` exists at the Claude Code install path and that the ZIP contains `grader/SKILL.md`.
-5. Tell the user:
+2. Install Python deps: `pip install -r requirements.txt` (runtime is stdlib-only; this installs `pytest` for verify). Requires **Python 3.11+**.
+3. **Claude Code:** copy `skills/grader/` into the personal skills path (overwrite if present).
+4. **Desktop ZIP:** run `python skills/grader/scripts/package_for_desktop.py` and note the printed zip path (default `dist/grader.zip`).
+5. Verify `SKILL.md` exists at the Claude Code install path and that the ZIP contains `grader/SKILL.md`.
+6. Tell the user:
    - Claude Code: run `/grader`
    - Claude Desktop / claude.ai: enable **Code execution and file creation**, then Customize → Skills → Upload `grader.zip`, toggle **grader** on, then ask to “grade my prompts” or “run grader”
 
@@ -47,6 +48,7 @@ $dest = Join-Path $env:USERPROFILE ".claude\skills\grader"
 New-Item -ItemType Directory -Force -Path (Split-Path $dest) | Out-Null
 git clone --depth 1 $repo $tmp
 if (-not (Test-Path (Join-Path $tmp "skills\grader\SKILL.md"))) { throw "Clone missing skills/grader/SKILL.md" }
+python -m pip install -r (Join-Path $tmp "requirements.txt")
 Copy-Item -Recurse -Force (Join-Path $tmp "skills\grader") $dest
 $zipOut = Join-Path $env:USERPROFILE "Downloads\grader.zip"
 python (Join-Path $tmp "skills\grader\scripts\package_for_desktop.py") --out $zipOut
@@ -67,6 +69,7 @@ ZIP_OUT="${HOME}/Downloads/grader.zip"
 mkdir -p "${HOME}/.claude/skills" "${HOME}/Downloads"
 git clone --depth 1 "$REPO" "$TMP"
 test -f "$TMP/skills/grader/SKILL.md"
+python3 -m pip install -r "$TMP/requirements.txt"
 rm -rf "$DEST"
 cp -R "$TMP/skills/grader" "$DEST"
 python3 "$TMP/skills/grader/scripts/package_for_desktop.py" --out "$ZIP_OUT"
@@ -81,6 +84,7 @@ echo "Desktop ZIP: $ZIP_OUT"
 **Windows**
 
 ```powershell
+python -m pip install -r requirements.txt
 Copy-Item -Recurse -Force skills\grader $env:USERPROFILE\.claude\skills\grader
 python skills\grader\scripts\package_for_desktop.py --out "$env:USERPROFILE\Downloads\grader.zip"
 ```
@@ -88,6 +92,7 @@ python skills\grader\scripts\package_for_desktop.py --out "$env:USERPROFILE\Down
 **macOS / Linux**
 
 ```bash
+python3 -m pip install -r requirements.txt
 mkdir -p ~/.claude/skills && rm -rf ~/.claude/skills/grader && cp -R skills/grader ~/.claude/skills/grader
 python3 skills/grader/scripts/package_for_desktop.py --out "$HOME/Downloads/grader.zip"
 ```
@@ -133,7 +138,7 @@ Requires Python 3.11+ on PATH for the extractor (Claude Code). Desktop uses code
 ## Dev tests (optional)
 
 ```bash
-pip install -r requirements-dev.txt
+pip install -r requirements.txt
 python -m pytest -v
 python skills/grader/scripts/package_for_desktop.py
 ```
