@@ -77,3 +77,18 @@ def test_is_coach_completion_requires_drill_round():
         "live_assessment_finished": True,
         "coaching_drill_rounds": 0,
     })
+    assert not is_coach_completion({
+        "completed": 1,
+        "live_assessment_finished": True,
+        "coaching_drill_rounds": 1,
+    })
+    assert not is_coach_completion({
+        "completed": "yes",
+        "live_assessment_finished": True,
+        "coaching_drill_rounds": 1,
+    })
+    assert not is_coach_completion({
+        "completed": True,
+        "live_assessment_finished": 1,
+        "coaching_drill_rounds": 1,
+    })
