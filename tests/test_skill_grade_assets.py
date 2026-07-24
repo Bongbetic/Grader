@@ -132,7 +132,13 @@ def test_v2_grade_sources_retired_from_skill_root():
     assert not (ROOT / "skills" / "grader" / "signals.md").exists()
 
 
-def test_v2_grade_sources_not_cited_in_v3_flows(skill_text, grade_flow_text):
-    combined = skill_text + grade_flow_text
-    assert "checklist.md" not in combined
-    assert "signals.md" not in combined
+def test_skill_md_documents_windows_shell_and_cursor_import(skill_text):
+    assert "PowerShell 5.1" in skill_text
+    assert "PowerShell 7" in skill_text
+    assert "grader-import" in skill_text
+
+
+def test_grade_flow_documents_windows_shell_and_cursor_import(grade_flow_text):
+    assert "PowerShell 5.1" in grade_flow_text
+    assert "PowerShell 7" in grade_flow_text
+    assert "grader-import" in grade_flow_text

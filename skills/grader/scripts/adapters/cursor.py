@@ -27,14 +27,43 @@ def discover(*, home: Path | None = None, limit: int = 100) -> list[dict[str, An
 
     paths = allowlist.paths_for_tool("cursor", home=home)
     paths = grader_lib.select_recent_sessions(paths, limit=limit)
+    candidates, _excluded = _discover_paths(paths)
+    return candidates
 
+
+def intake_stats(*, home: Path | None = None, limit: int = 100) -> dict[str, Any]:
+    """Return session-limit vs full-corpus counts for scan summaries."""
+    if not consent.has_consent("cursor"):
+        raise PermissionError("Cursor intake consent not granted")
+
+    paths = allowlist.paths_for_tool("cursor", home=home)
+    selected = grader_lib.select_recent_sessions(paths, limit=limit)
+    all_candidates, corpus_excluded = _discover_paths(paths)
+    scan_candidates, scan_excluded = _discover_paths(selected)
+    return {
+        "sessions_found": len(paths),
+        "sessions_scanned": len(selected),
+        "session_limit": limit,
+        "prompts_discovered": len(all_candidates),
+        "prompts_in_scan": len(scan_candidates),
+        "protocol_reply_excluded": scan_excluded,
+        "protocol_reply_excluded_corpus": corpus_excluded,
+    }
+
+
+def _discover_paths(paths: list[Path]) -> tuple[list[dict[str, Any]], int]:
     candidates: list[dict[str, Any]] = []
+    protocol_reply_excluded = 0
     for path in paths:
         if path.suffix in {".jsonl", ".json"}:
-            candidates.extend(_parse_cursor_jsonl(path))
+            file_candidates, excluded = _parse_cursor_jsonl(path)
         elif path.suffix == ".txt":
-            candidates.extend(_parse_txt_candidates(path))
-    return candidates
+            file_candidates, excluded = _parse_txt_candidates(path)
+        else:
+            continue
+        protocol_reply_excluded += excluded
+        candidates.extend(file_candidates)
+    return candidates, protocol_reply_excluded
 
 
 def discover_turns(*, home: Path | None = None, limit: int = 100) -> list[dict[str, Any]]:
@@ -59,9 +88,10 @@ def _cursor_session_id(path: Path) -> str:
     return path.parent.name
 
 
-def _parse_cursor_jsonl(path: Path) -> list[dict[str, Any]]:
+def _parse_cursor_jsonl(path: Path) -> tuple[list[dict[str, Any]], int]:
     """Parse Cursor agent-transcript JSONL (role + message.content[] shape)."""
     prompts: list[dict[str, Any]] = []
+    protocol_reply_excluded = 0
     timestamps: list[str] = []
     fallback_ts = file_mtime_iso(path)
     with path.open(encoding="utf-8", errors="ignore") as fh:
@@ -86,6 +116,8 @@ def _parse_cursor_jsonl(path: Path) -> list[dict[str, Any]]:
 
             cleaned, notes = _process_learner_text(text)
             if not cleaned:
+                if "workflow_protocol_reply" in notes:
+                    protocol_reply_excluded += 1
                 continue
             if prompts and prompts[-1]["text"] == cleaned:
                 continue
@@ -101,13 +133,13 @@ def _parse_cursor_jsonl(path: Path) -> list[dict[str, Any]]:
                 timestamps.append(ts)
 
     if not prompts:
-        return []
+        return [], protocol_reply_excluded
     timestamp = timestamps[0] if timestamps else fallback_ts
     file_mtime = fallback_ts
     for prompt in prompts:
         prompt["timestamp"] = timestamp
         prompt["_file_mtime"] = file_mtime
-    return prompts
+    return prompts, protocol_reply_excluded
 
 
 def _parse_cursor_turns(path: Path) -> list[dict[str, Any]]:
@@ -175,9 +207,10 @@ def _extract_cursor_text(event: dict[str, Any]) -> str | None:
     )
 
 
-def _parse_txt_candidates(path: Path) -> list[dict[str, Any]]:
+def _parse_txt_candidates(path: Path) -> tuple[list[dict[str, Any]], int]:
     """Treat each non-empty line of a .txt transcript as a prompt."""
     candidates: list[dict[str, Any]] = []
+    protocol_reply_excluded = 0
     with path.open(encoding="utf-8", errors="ignore") as fh:
         for line in fh:
             text = line.strip()
@@ -185,6 +218,8 @@ def _parse_txt_candidates(path: Path) -> list[dict[str, Any]]:
                 continue
             cleaned, notes = _process_learner_text(text)
             if not cleaned:
+                if "workflow_protocol_reply" in notes:
+                    protocol_reply_excluded += 1
                 continue
             candidates.append({
                 "text": cleaned,
@@ -197,11 +232,11 @@ def _parse_txt_candidates(path: Path) -> list[dict[str, Any]]:
     for candidate in candidates:
         candidate["timestamp"] = file_mtime
         candidate["_file_mtime"] = file_mtime
-    return candidates
+    return candidates, protocol_reply_excluded
 
 
-def scan_summary(results: list[dict[str, Any]]) -> dict[str, Any]:
+def scan_summary(results: list[dict[str, Any]], *, intake: dict[str, dict] | None = None) -> dict[str, Any]:
     """Summarize a list of raw candidates by source tool."""
     from adapters import claude as claude_ad
 
-    return claude_ad.scan_summary(results)
+    return claude_ad.scan_summary(results, intake=intake)

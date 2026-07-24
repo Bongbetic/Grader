@@ -29,30 +29,58 @@ def discover(*, home: Path | None = None, limit: int = 100) -> list[dict[str, An
 
     paths = allowlist.paths_for_tool("copilot", home=home)
     paths = grader_lib.select_recent_sessions(paths, limit=limit)
-
-    candidates: list[dict[str, Any]] = []
-    for path in paths:
-        try:
-            file_candidates = _parse_copilot_file(path)
-        except Exception:
-            _partial = True
-            continue
-        candidates.extend(file_candidates)
+    candidates, _excluded = _discover_paths(paths)
     return candidates
 
 
-def _parse_copilot_file(path: Path) -> list[dict[str, Any]]:
+def intake_stats(*, home: Path | None = None, limit: int = 100) -> dict[str, Any]:
+    """Return session-limit vs full-corpus counts for scan summaries."""
+    if not consent.has_consent("copilot"):
+        raise PermissionError("Copilot intake consent not granted")
+
+    paths = allowlist.paths_for_tool("copilot", home=home)
+    selected = grader_lib.select_recent_sessions(paths, limit=limit)
+    all_candidates, corpus_excluded = _discover_paths(paths)
+    scan_candidates, scan_excluded = _discover_paths(selected)
+    return {
+        "sessions_found": len(paths),
+        "sessions_scanned": len(selected),
+        "session_limit": limit,
+        "prompts_discovered": len(all_candidates),
+        "prompts_in_scan": len(scan_candidates),
+        "protocol_reply_excluded": scan_excluded,
+        "protocol_reply_excluded_corpus": corpus_excluded,
+    }
+
+
+def _discover_paths(paths: list[Path]) -> tuple[list[dict[str, Any]], int]:
+    global _partial
+    candidates: list[dict[str, Any]] = []
+    protocol_reply_excluded = 0
+    for path in paths:
+        try:
+            file_candidates, excluded = _parse_copilot_file(path)
+        except Exception:
+            _partial = True
+            continue
+        protocol_reply_excluded += excluded
+        candidates.extend(file_candidates)
+    return candidates, protocol_reply_excluded
+
+
+def _parse_copilot_file(path: Path) -> tuple[list[dict[str, Any]], int]:
     """Parse a single Copilot chat file as JSONL/JSON.
 
     Returns candidates on success. Any malformed JSON causes an empty result.
     """
     global _partial
     prompts: list[dict[str, Any]] = []
+    protocol_reply_excluded = 0
     timestamps: list[str] = []
     with path.open(encoding="utf-8", errors="ignore") as fh:
         raw = fh.read().strip()
     if not raw:
-        return []
+        return [], 0
 
     # Try to parse the whole file as JSON.
     try:
@@ -70,7 +98,7 @@ def _parse_copilot_file(path: Path) -> list[dict[str, Any]]:
                 raise exc from None
     if not isinstance(data, list):
         _partial = True
-        return []
+        return [], 0
 
     for event in data:
         if not isinstance(event, dict):
@@ -81,6 +109,8 @@ def _parse_copilot_file(path: Path) -> list[dict[str, Any]]:
             continue
         cleaned, notes = _process_learner_text(text)
         if not cleaned:
+            if "workflow_protocol_reply" in notes:
+                protocol_reply_excluded += 1
             continue
         if prompts and prompts[-1]["text"] == cleaned:
             continue
@@ -98,7 +128,7 @@ def _parse_copilot_file(path: Path) -> list[dict[str, Any]]:
     if prompts and timestamps:
         for p in prompts:
             p["timestamp"] = timestamps[0]
-    return prompts
+    return prompts, protocol_reply_excluded
 
 
 def _extract_text(event: dict[str, Any]) -> str | None:
@@ -117,11 +147,11 @@ def _extract_text(event: dict[str, Any]) -> str | None:
     return None
 
 
-def scan_summary(results: list[dict[str, Any]]) -> dict[str, Any]:
+def scan_summary(results: list[dict[str, Any]], *, intake: dict[str, dict] | None = None) -> dict[str, Any]:
     """Summarize a list of raw candidates by source tool."""
     from adapters import claude as claude_ad
 
-    summary = claude_ad.scan_summary(results)
+    summary = claude_ad.scan_summary(results, intake=intake)
     if not results or _partial:
         summary["partial"] = True
     return summary

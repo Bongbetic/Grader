@@ -71,6 +71,35 @@ def _extract_user_query(text: str) -> tuple[str, list[str]]:
     return cleaned, ["stripped_user_query_tags"]
 
 
+_WORKFLOW_GATE_REPLIES = frozenset({
+    "yes",
+    "no",
+    "y",
+    "n",
+    "ok",
+    "okay",
+    "approve",
+    "approved",
+    "deny",
+    "denied",
+    "cancel",
+    "continue",
+    "proceed",
+    "skip",
+    "look again",
+    "try again",
+    "go ahead",
+    "looks good",
+    "lgtm",
+})
+
+
+def classify_workflow_protocol_reply(text: str) -> bool:
+    """Return True when text is a workflow gate reply, not learner craft."""
+    normalized = text.strip().lower().rstrip(".!?")
+    return normalized in _WORKFLOW_GATE_REPLIES
+
+
 def sanitize_learner_text(text: str) -> tuple[str, list[str]]:
     """Return learner-authored text with injected transcript boilerplate removed."""
     if not text or not text.strip():
@@ -89,4 +118,7 @@ def sanitize_learner_text(text: str) -> tuple[str, list[str]]:
     notes.extend(preamble_notes)
 
     result = re.sub(r"\n{3,}", "\n\n", result).strip()
-    return result, list(dict.fromkeys(notes))
+    notes = list(dict.fromkeys(notes))
+    if result and classify_workflow_protocol_reply(result):
+        return "", [*notes, "workflow_protocol_reply"]
+    return result, notes

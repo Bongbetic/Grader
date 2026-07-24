@@ -161,3 +161,115 @@ def test_scan_summary_counts(tmp_path, monkeypatch):
     tools = {t["tool"]: t for t in summary["tools"]}
     assert tools["claude"]["count"] == 2
     assert tools["import"]["count"] == 1
+
+
+def test_scan_summary_merges_intake_stats_for_empty_tool():
+    intake = {
+        "cursor": {
+            "sessions_found": 12,
+            "sessions_scanned": 10,
+            "session_limit": 10,
+            "prompts_discovered": 0,
+            "prompts_in_scan": 0,
+            "protocol_reply_excluded": 0,
+        }
+    }
+    summary = claude_ad.scan_summary([], intake=intake)
+    assert summary["total"] == 0
+    assert summary["tools"][0]["tool"] == "cursor"
+    assert summary["tools"][0]["sessions_found"] == 12
+
+
+def test_scan_summary_merges_intake_stats():
+    results = [
+        {"text": "a", "timestamp": "2026-07-01T00:00:00Z", "source_tool": "cursor", "model_hint": None},
+    ]
+    intake = {
+        "cursor": {
+            "sessions_found": 12,
+            "sessions_scanned": 10,
+            "session_limit": 10,
+            "prompts_discovered": 539,
+            "prompts_in_scan": 272,
+            "protocol_reply_excluded": 3,
+        }
+    }
+    summary = claude_ad.scan_summary(results, intake=intake)
+    tools = {t["tool"]: t for t in summary["tools"]}
+    assert tools["cursor"]["sessions_found"] == 12
+    assert tools["cursor"]["sessions_scanned"] == 10
+    assert tools["cursor"]["session_limit"] == 10
+    assert tools["cursor"]["prompts_discovered"] == 539
+    assert tools["cursor"]["prompts_in_scan"] == 272
+    assert tools["cursor"]["protocol_reply_excluded"] == 3
+
+
+def test_claude_intake_stats_reports_limit_vs_corpus(tmp_path, monkeypatch):
+    monkeypatch.setenv("GRADER_HOME", str(tmp_path))
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
+    projects = tmp_path / "projects" / "p"
+    projects.mkdir(parents=True)
+    for idx in range(3):
+        (projects / f"s{idx}.jsonl").write_text(
+            json.dumps({
+                "type": "user",
+                "message": {"role": "user", "content": f"prompt {idx}"},
+                "timestamp": "2026-07-01T00:00:00Z",
+            }) + "\n",
+            encoding="utf-8",
+        )
+    consent.grant_consent("claude")
+    stats = claude_ad.intake_stats(limit=2)
+    assert stats["sessions_found"] == 3
+    assert stats["sessions_scanned"] == 2
+    assert stats["session_limit"] == 2
+    assert stats["prompts_discovered"] == 3
+    assert stats["prompts_in_scan"] == 2
+
+
+def test_scan_intake_json_includes_intake_stats(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("GRADER_HOME", str(tmp_path))
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
+    projects = tmp_path / "projects" / "p"
+    projects.mkdir(parents=True)
+    for idx in range(3):
+        (projects / f"s{idx}.jsonl").write_text(
+            json.dumps({
+                "type": "user",
+                "message": {"role": "user", "content": f"prompt {idx}"},
+                "timestamp": "2026-07-01T00:00:00Z",
+            }) + "\n",
+            encoding="utf-8",
+        )
+    consent.grant_consent("claude")
+    import scan_intake
+
+    rc = scan_intake.main(["--tools", "claude", "--json", "--limit", "2"])
+    assert rc == 0
+    summary = json.loads(capsys.readouterr().out)
+    tools = {t["tool"]: t for t in summary["tools"]}
+    assert tools["claude"]["sessions_found"] == 3
+    assert tools["claude"]["sessions_scanned"] == 2
+    assert tools["claude"]["prompts_discovered"] == 3
+
+
+def test_discover_excludes_workflow_protocol_reply(tmp_path, monkeypatch):
+    monkeypatch.setenv("GRADER_HOME", str(tmp_path))
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
+    projects = tmp_path / "projects" / "p"
+    projects.mkdir(parents=True)
+    (projects / "s.jsonl").write_text(
+        "\n".join(
+            json.dumps({
+                "type": "user",
+                "message": {"role": "user", "content": content},
+                "timestamp": "2026-07-01T00:00:00Z",
+            })
+            for content in ("approved", "build the login page")
+        ) + "\n",
+        encoding="utf-8",
+    )
+    consent.grant_consent("claude")
+    results = claude_ad.discover(limit=5)
+    assert len(results) == 1
+    assert results[0]["text"] == "build the login page"

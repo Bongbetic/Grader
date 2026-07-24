@@ -41,11 +41,38 @@ def discover(*, home: Path | None = None, limit: int = 100) -> list[dict[str, An
 
     paths = allowlist.paths_for_tool("codex", home=home)
     paths = grader_lib.select_recent_sessions(paths, limit=limit)
-
-    candidates: list[dict[str, Any]] = []
-    for path in paths:
-        candidates.extend(_parse_codex_candidates(path))
+    candidates, _excluded = _discover_paths(paths)
     return candidates
+
+
+def intake_stats(*, home: Path | None = None, limit: int = 100) -> dict[str, Any]:
+    """Return session-limit vs full-corpus counts for scan summaries."""
+    if not consent.has_consent("codex"):
+        raise PermissionError("Codex intake consent not granted")
+
+    paths = allowlist.paths_for_tool("codex", home=home)
+    selected = grader_lib.select_recent_sessions(paths, limit=limit)
+    all_candidates, corpus_excluded = _discover_paths(paths)
+    scan_candidates, scan_excluded = _discover_paths(selected)
+    return {
+        "sessions_found": len(paths),
+        "sessions_scanned": len(selected),
+        "session_limit": limit,
+        "prompts_discovered": len(all_candidates),
+        "prompts_in_scan": len(scan_candidates),
+        "protocol_reply_excluded": scan_excluded,
+        "protocol_reply_excluded_corpus": corpus_excluded,
+    }
+
+
+def _discover_paths(paths: list[Path]) -> tuple[list[dict[str, Any]], int]:
+    candidates: list[dict[str, Any]] = []
+    protocol_reply_excluded = 0
+    for path in paths:
+        file_candidates, excluded = _parse_codex_candidates(path)
+        protocol_reply_excluded += excluded
+        candidates.extend(file_candidates)
+    return candidates, protocol_reply_excluded
 
 
 def discover_turns(*, home: Path | None = None, limit: int = 100) -> list[dict[str, Any]]:
@@ -58,7 +85,7 @@ def discover_turns(*, home: Path | None = None, limit: int = 100) -> list[dict[s
 
     turns: list[dict[str, Any]] = []
     for path in paths:
-        turns.extend(_parse_codex_turns(path))
+        turns.extend(_parse_codex_turns(path)[0])
     return turns
 
 
@@ -119,10 +146,11 @@ def _extract_codex_line_turn(
     return None
 
 
-def _parse_codex_turns(path: Path) -> list[dict[str, Any]]:
+def _parse_codex_turns(path: Path) -> tuple[list[dict[str, Any]], int]:
     fallback_ts = file_mtime_iso(path)
     session_id = _codex_session_id(path)
     turns: list[dict[str, Any]] = []
+    protocol_reply_excluded = 0
     with path.open(encoding="utf-8", errors="ignore") as fh:
         for line in fh:
             line = line.strip()
@@ -144,6 +172,8 @@ def _parse_codex_turns(path: Path) -> list[dict[str, Any]]:
             processor = _process_learner_text if role == "user" else _process_assistant_text
             cleaned, notes = processor(text)
             if not cleaned:
+                if role == "user" and "workflow_protocol_reply" in notes:
+                    protocol_reply_excluded += 1
                 continue
             if turns and turns[-1]["role"] == role and turns[-1]["text"] == cleaned:
                 continue
@@ -157,14 +187,14 @@ def _parse_codex_turns(path: Path) -> list[dict[str, Any]]:
             )
             turn["_redaction_notes"] = notes
             turns.append(turn)
-    return turns
+    return turns, protocol_reply_excluded
 
 
-def _parse_codex_candidates(path: Path) -> list[dict[str, Any]]:
+def _parse_codex_candidates(path: Path) -> tuple[list[dict[str, Any]], int]:
     """Read a Codex JSONL file and return user prompt candidates only."""
-    turns = _parse_codex_turns(path)
+    turns, protocol_reply_excluded = _parse_codex_turns(path)
     if not turns:
-        return []
+        return [], protocol_reply_excluded
     file_mtime = file_mtime_iso(path)
     candidates: list[dict[str, Any]] = []
     for turn in turns:
@@ -178,11 +208,11 @@ def _parse_codex_candidates(path: Path) -> list[dict[str, Any]]:
             "_redaction_notes": turn.get("_redaction_notes") or [],
             "_file_mtime": file_mtime,
         })
-    return candidates
+    return candidates, protocol_reply_excluded
 
 
-def scan_summary(results: list[dict[str, Any]]) -> dict[str, Any]:
+def scan_summary(results: list[dict[str, Any]], *, intake: dict[str, dict] | None = None) -> dict[str, Any]:
     """Summarize a list of raw candidates by source tool."""
     from adapters import claude as claude_ad
 
-    return claude_ad.scan_summary(results)
+    return claude_ad.scan_summary(results, intake=intake)

@@ -1,6 +1,8 @@
 """Claude adapter: discover user prompts from the local Claude projects tree."""
 from __future__ import annotations
 
+from pathlib import Path
+
 import consent
 import grader_lib
 import allowlist
@@ -10,6 +12,28 @@ from adapters import _make_turn, _process_assistant_text, _process_learner_text
 
 def _process_prompt(text: str) -> tuple[str, list[str]]:
     return _process_learner_text(text)
+
+
+def _discover_paths(paths: list[Path]) -> tuple[list[dict], int]:
+    candidates: list[dict] = []
+    protocol_reply_excluded = 0
+    for path in paths:
+        session = grader_lib.parse_session_jsonl(path)
+        timestamp = session.get("started_at") or session.get("ended_at") or ""
+        for prompt in session.get("user_prompts") or []:
+            cleaned, notes = _process_prompt(prompt)
+            if not cleaned:
+                if "workflow_protocol_reply" in notes:
+                    protocol_reply_excluded += 1
+                continue
+            candidates.append({
+                "text": cleaned,
+                "timestamp": timestamp,
+                "source_tool": "claude",
+                "model_hint": None,
+                "_redaction_notes": notes,
+            })
+    return candidates, protocol_reply_excluded
 
 
 def discover(*, limit: int = 100) -> list[dict]:
@@ -22,23 +46,28 @@ def discover(*, limit: int = 100) -> list[dict]:
 
     paths = allowlist.paths_for_tool("claude")
     paths = grader_lib.select_recent_sessions(paths, limit=limit)
-
-    candidates: list[dict] = []
-    for path in paths:
-        session = grader_lib.parse_session_jsonl(path)
-        timestamp = session.get("started_at") or session.get("ended_at") or ""
-        for prompt in session.get("user_prompts") or []:
-            cleaned, notes = _process_prompt(prompt)
-            if not cleaned:
-                continue
-            candidates.append({
-                "text": cleaned,
-                "timestamp": timestamp,
-                "source_tool": "claude",
-                "model_hint": None,
-                "_redaction_notes": notes,
-            })
+    candidates, _excluded = _discover_paths(paths)
     return candidates
+
+
+def intake_stats(*, limit: int = 100) -> dict:
+    """Return session-limit vs full-corpus counts for scan summaries."""
+    if not consent.has_consent("claude"):
+        raise PermissionError("Claude intake consent not granted")
+
+    paths = allowlist.paths_for_tool("claude")
+    selected = grader_lib.select_recent_sessions(paths, limit=limit)
+    all_candidates, corpus_excluded = _discover_paths(paths)
+    scan_candidates, scan_excluded = _discover_paths(selected)
+    return {
+        "sessions_found": len(paths),
+        "sessions_scanned": len(selected),
+        "session_limit": limit,
+        "prompts_discovered": len(all_candidates),
+        "prompts_in_scan": len(scan_candidates),
+        "protocol_reply_excluded": scan_excluded,
+        "protocol_reply_excluded_corpus": corpus_excluded,
+    }
 
 
 def discover_turns(*, limit: int = 100) -> list[dict]:
@@ -71,7 +100,7 @@ def discover_turns(*, limit: int = 100) -> list[dict]:
     return turns
 
 
-def scan_summary(results: list[dict]) -> dict:
+def scan_summary(results: list[dict], *, intake: dict[str, dict] | None = None) -> dict:
     """Summarize a list of raw candidates by source tool."""
     tools: dict[str, dict] = {}
     for r in results:
@@ -95,6 +124,16 @@ def scan_summary(results: list[dict]) -> dict:
         _, notes = redact.redact_text(text)
         if notes:
             entry["redaction_count"] += 1
+    if intake:
+        for tool, meta in intake.items():
+            if tool not in tools:
+                tools[tool] = {
+                    "tool": tool,
+                    "count": 0,
+                    "time_range": {"min": None, "max": None},
+                    "redaction_count": 0,
+                }
+            tools[tool].update(meta)
     return {
         "tools": list(tools.values()),
         "total": len(results),

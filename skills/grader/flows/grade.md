@@ -14,7 +14,20 @@ Or call `consent.grant_consent(tool)` from `scripts/consent.py`. Then run the al
 
 ```bash
 python3 scripts/scan_intake.py --tools claude --json
+# Optional: --limit 50 caps recent session files scanned per tool (default 100)
 ```
+
+**Windows shell:** PowerShell 5.1 chains with `;` (not `&&`). PowerShell 7+ supports `&&`.
+
+```powershell
+# PowerShell 5.1
+cd $HOME\.cursor\skills\grader; python scripts/scan_intake.py --tools cursor --json
+
+# PowerShell 7+
+cd $HOME\.cursor\skills\grader && python scripts/scan_intake.py --tools cursor --json
+```
+
+**Cursor manual export (optional):** copy exported Cursor chat `.jsonl` files into `~/.cursor/grader-import/` when auto-discovery is incomplete, then scan again.
 
 For server-side tools or pasted prompts, use the import/paste adapter instead:
 
@@ -32,7 +45,7 @@ Each candidate becomes a `PromptRecord` through `scripts/normalize.py`, which re
 
 Both scan and paste/import paths require explicit Learner confirmation before grading. If the user declines, stop and do not judge any prompt.
 
-**Scan path:** show the JSON summary from `scan_intake.py` (tool, candidate count, time range, redaction count).
+**Scan path:** show the JSON summary from `scan_intake.py` (tool, candidate count, session limit vs corpus, time range, redaction count, `protocol_reply_excluded`).
 
 **Paste/import path:** after `normalize.to_prompt_record`, present a short summary:
 
@@ -52,7 +65,7 @@ When intake returns **more than 30** candidates, default to a **representative s
 
 **You are the judge.** The agent running this skill scores each prompt — there is no external judge service. Do not use heuristic batch scripts or automated rubric shortcuts for learner-facing grades; every prompt needs full dimension JSON from the host model.
 
-Omit any turn classified `workflow_protocol_reply` from Craft grading and from efficacy rework counts. Grade only turns where the user composes their own instruction.
+Omit any turn classified `workflow_protocol_reply` from Craft grading and from efficacy rework counts. The shared sanitizer drops obvious gate replies (`approved`, `look again`, bare `yes`/`no`, etc.) at intake; the judge must still classify borderline cases in the `classification` block. Grade only turns where the user composes their own instruction.
 
 For each prompt record:
 

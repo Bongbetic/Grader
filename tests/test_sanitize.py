@@ -89,3 +89,35 @@ def test_sanitize_strips_git_status_without_user_query():
     cleaned, notes = sanitize.sanitize_learner_text(raw)
     assert cleaned == "ship the sanitizer"
     assert "stripped_boilerplate_block" in notes
+
+
+@pytest.mark.parametrize(
+    "gate_reply",
+    [
+        "yes",
+        "no",
+        "approved",
+        "look again",
+        "go ahead",
+        "lgtm",
+    ],
+)
+def test_sanitize_classifies_workflow_protocol_reply(gate_reply):
+    cleaned, notes = sanitize.sanitize_learner_text(gate_reply)
+    assert cleaned == ""
+    assert "workflow_protocol_reply" in notes
+
+
+@pytest.mark.parametrize(
+    "learner_prompt",
+    [
+        "commit and push",
+        "/implement #21",
+        "/grader grade my prompts",
+        "yes add pagination to the users API",
+    ],
+)
+def test_sanitize_keeps_composed_instructions(learner_prompt):
+    cleaned, notes = sanitize.sanitize_learner_text(learner_prompt)
+    assert cleaned == learner_prompt
+    assert "workflow_protocol_reply" not in notes

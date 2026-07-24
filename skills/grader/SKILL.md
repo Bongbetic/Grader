@@ -74,13 +74,26 @@ From this skill directory, run an allowlisted scan:
 
 ```bash
 python3 scripts/scan_intake.py --tools claude --json
+# Optional: --limit 50 caps recent session files scanned per tool (default 100)
+```
+
+**Windows shell:** default PowerShell 5.1 does not support `&&`. Chain commands with `;` instead, or use PowerShell 7+ where `&&` works.
+
+```powershell
+# PowerShell 5.1
+cd $HOME\.cursor\skills\grader; python scripts/scan_intake.py --tools cursor --json
+
+# PowerShell 7+
+cd $HOME\.cursor\skills\grader && python scripts/scan_intake.py --tools cursor --json
 ```
 
 Supported tools: `claude`, `codex`, `cursor`, `copilot`. For server-side tools or pasted prompts, use `adapters/import_paste.py` or the import/paste path in `flows/grade.md`.
 
+**Cursor manual export (optional):** when auto-discovery misses transcripts, copy exported Cursor chat `.jsonl` files into `~/.cursor/grader-import/` and scan again. Grader reads that folder in addition to `~/.cursor/projects/**/agent-transcripts/`.
+
 ### 3. Show the summary and wait for proceed
 
-`scan_intake.py` prints a JSON summary: tool, candidate count, time range, redaction count. Present it to the user and grade only after they confirm.
+`scan_intake.py` prints a JSON summary: tool, candidate count, session limit vs corpus (`sessions_found`, `sessions_scanned`, `prompts_discovered`, `prompts_in_scan`), time range, redaction count, and `protocol_reply_excluded` (workflow gate replies dropped by the shared sanitizer). Present it to the user and grade only after they confirm.
 
 ### 4. Follow the selected flow
 
