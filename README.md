@@ -110,7 +110,7 @@ Grader reads allowlisted local history (or pasted exports) from:
 |------|----------------------|----------|---------------|------------------|
 | **Claude Code** | ✅ Yes | macOS, Linux, Windows | `claude` | `~/.claude/projects/**/sessions/*.jsonl` |
 | **OpenAI Codex CLI** | ✅ Yes | macOS, Linux, Windows | `codex` | `~/.codex/sessions/**/*.jsonl` (or `$CODEX_HOME`) |
-| **Cursor** | ✅ Yes | macOS, Linux, Windows | `cursor` | `~/.cursor/projects/**/agent-transcripts/*` and `~/.cursor/grader-import/` |
+| **Cursor** | ✅ Yes | macOS, Linux, Windows | `cursor` | `~/.cursor/projects/**/agent-transcripts/<uuid>/<uuid>.jsonl` (nested) and `~/.cursor/grader-import/` |
 | **GitHub Copilot** | ⚠️ Best-effort | Windows (VS Code) | `copilot` | `%APPDATA%\Code\User\globalStorage\github.copilot*\**\*chat*` |
 | **ChatGPT / Gemini / others** | 📋 Paste/import | Any | — | Paste or export into the skill session |
 
@@ -336,7 +336,7 @@ python3 scripts/scan_intake.py --tools cursor --json
 
 **History paths:**
 
-- `~/.cursor/projects/<workspace>/agent-transcripts/*` (`.jsonl`, `.json`, `.txt`)
+- `~/.cursor/projects/<workspace>/agent-transcripts/<uuid>/<uuid>.jsonl` (nested layout; also flat `*.jsonl` / `*.json` / `*.txt` under that tree)
 - `~/.cursor/grader-import/**/*.jsonl` (manual exports)
 
 **Manual export (optional):** Copy or export Cursor chat transcripts into `~/.cursor/grader-import/` as `.jsonl` files, then scan again.

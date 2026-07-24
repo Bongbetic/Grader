@@ -90,7 +90,7 @@ cd $HOME\.cursor\skills\grader && python scripts/scan_intake.py --tools cursor -
 
 Supported tools: `claude`, `codex`, `cursor`, `copilot`. For server-side tools or pasted prompts, use `adapters/import_paste.py` or the import/paste path in `flows/grade.md`.
 
-**Cursor manual export (optional):** when auto-discovery misses transcripts, copy exported Cursor chat `.jsonl` files into `~/.cursor/grader-import/` and scan again. Grader reads that folder in addition to `~/.cursor/projects/**/agent-transcripts/`.
+**Cursor manual export (optional):** when auto-discovery misses transcripts, copy exported Cursor chat `.jsonl` files into `~/.cursor/grader-import/` and scan again. Grader reads that folder in addition to nested `~/.cursor/projects/**/agent-transcripts/<uuid>/<uuid>.jsonl`.
 
 ### 3. Show the summary and wait for proceed
 
