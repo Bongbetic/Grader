@@ -21,18 +21,17 @@ class AdapterCapability:
 _ALL_FALSE = AdapterCapability(False, False, False, False, False)
 
 CAPABILITY_MATRIX: dict[str, AdapterCapability] = {
-    # Claude: per-file sessions, user prompts extracted, timestamps present;
-    # assistant text NOT currently preserved by the adapter.
+    # Claude: per-file sessions; discover_turns preserves user + assistant turns.
     "claude": AdapterCapability(
-        role=True, session_boundary=True, assistant_text=False,
+        role=True, session_boundary=True, assistant_text=True,
         timestamp=True, workflow_markers=True,
     ),
     "cursor": AdapterCapability(
-        role=True, session_boundary=True, assistant_text=False,
+        role=True, session_boundary=True, assistant_text=True,
         timestamp=True, workflow_markers=False,
     ),
     "codex": AdapterCapability(
-        role=True, session_boundary=True, assistant_text=False,
+        role=True, session_boundary=True, assistant_text=True,
         timestamp=True, workflow_markers=False,
     ),
     "copilot": AdapterCapability(

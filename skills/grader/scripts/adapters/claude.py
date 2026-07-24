@@ -5,7 +5,7 @@ import consent
 import grader_lib
 import allowlist
 import redact
-from adapters import _process_learner_text
+from adapters import _make_turn, _process_assistant_text, _process_learner_text
 
 
 def _process_prompt(text: str) -> tuple[str, list[str]]:
@@ -42,12 +42,7 @@ def discover(*, limit: int = 100) -> list[dict]:
 
 
 def discover_turns(*, limit: int = 100) -> list[dict]:
-    """Return session-structured user turns from Claude sessions.
-
-    Companion to discover(); preserves session_id + turn_index so downstream
-    code can build canonical TurnRecords. User turns only (the adapter does not
-    preserve assistant text — see capability matrix).
-    """
+    """Return session-structured user and assistant turns from Claude sessions."""
     if not consent.has_consent("claude"):
         raise PermissionError("Claude intake consent not granted")
 
@@ -56,21 +51,23 @@ def discover_turns(*, limit: int = 100) -> list[dict]:
 
     turns: list[dict] = []
     for path in paths:
-        session = grader_lib.parse_session_jsonl(path)
-        session_id = str(session.get("session_id") or getattr(path, "stem", None) or path)
-        timestamp = session.get("started_at") or session.get("ended_at") or ""
-        for idx, prompt in enumerate(session.get("user_prompts") or []):
-            cleaned, _notes = _process_prompt(prompt)
+        session = grader_lib.parse_session_turns(path)
+        session_id = str(session.get("session_id") or path.stem)
+        fallback_ts = session.get("started_at") or ""
+        for raw in session.get("turns") or []:
+            role = raw.get("role", "user")
+            processor = _process_learner_text if role == "user" else _process_assistant_text
+            cleaned, _notes = processor(raw.get("text") or "")
             if not cleaned:
                 continue
-            turns.append({
-                "session_id": session_id,
-                "turn_index": idx,
-                "role": "user",
-                "text": cleaned,
-                "timestamp": timestamp,
-                "model_id": None,
-            })
+            turns.append(_make_turn(
+                session_id=session_id,
+                turn_index=len(turns),
+                role=role,
+                text=cleaned,
+                timestamp=str(raw.get("timestamp") or fallback_ts),
+                model_id=None,
+            ))
     return turns
 
 
@@ -79,7 +76,7 @@ def scan_summary(results: list[dict]) -> dict:
     tools: dict[str, dict] = {}
     for r in results:
         tool = r.get("source_tool", "unknown")
-        ts = r.get("timestamp") or ""
+        ts = r.get("timestamp") or r.get("_file_mtime") or ""
         if tool not in tools:
             tools[tool] = {
                 "tool": tool,

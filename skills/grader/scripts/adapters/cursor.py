@@ -2,14 +2,19 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import consent
 import grader_lib
 import allowlist
-from adapters import _extract_text, _process_learner_text
+from adapters import (
+    _extract_text,
+    _make_turn,
+    _process_assistant_text,
+    _process_learner_text,
+    file_mtime_iso,
+)
 
 
 def discover(*, home: Path | None = None, limit: int = 100) -> list[dict[str, Any]]:
@@ -32,16 +37,33 @@ def discover(*, home: Path | None = None, limit: int = 100) -> list[dict[str, An
     return candidates
 
 
-def _file_mtime_iso(path: Path) -> str:
-    ts = path.stat().st_mtime
-    return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
+def discover_turns(*, home: Path | None = None, limit: int = 100) -> list[dict[str, Any]]:
+    """Return session-structured user and assistant turns from Cursor transcripts."""
+    if not consent.has_consent("cursor"):
+        raise PermissionError("Cursor intake consent not granted")
+
+    paths = allowlist.paths_for_tool("cursor", home=home)
+    paths = grader_lib.select_recent_sessions(paths, limit=limit)
+
+    turns: list[dict[str, Any]] = []
+    for path in paths:
+        if path.suffix not in {".jsonl", ".json"}:
+            continue
+        turns.extend(_parse_cursor_turns(path))
+    return turns
+
+
+def _cursor_session_id(path: Path) -> str:
+    if path.parent.name == "agent-transcripts":
+        return path.stem
+    return path.parent.name
 
 
 def _parse_cursor_jsonl(path: Path) -> list[dict[str, Any]]:
     """Parse Cursor agent-transcript JSONL (role + message.content[] shape)."""
     prompts: list[dict[str, Any]] = []
     timestamps: list[str] = []
-    fallback_ts = _file_mtime_iso(path)
+    fallback_ts = file_mtime_iso(path)
     with path.open(encoding="utf-8", errors="ignore") as fh:
         for line in fh:
             line = line.strip()
@@ -81,9 +103,62 @@ def _parse_cursor_jsonl(path: Path) -> list[dict[str, Any]]:
     if not prompts:
         return []
     timestamp = timestamps[0] if timestamps else fallback_ts
+    file_mtime = fallback_ts
     for prompt in prompts:
         prompt["timestamp"] = timestamp
+        prompt["_file_mtime"] = file_mtime
     return prompts
+
+
+def _parse_cursor_turns(path: Path) -> list[dict[str, Any]]:
+    """Parse Cursor agent-transcript JSONL into ordered user+assistant turns."""
+    session_id = _cursor_session_id(path)
+    fallback_ts = file_mtime_iso(path)
+    turns: list[dict[str, Any]] = []
+    with path.open(encoding="utf-8", errors="ignore") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(event, dict):
+                continue
+
+            role = event.get("role")
+            if role is None:
+                if event.get("text") or event.get("prompt"):
+                    role = "user"
+                else:
+                    continue
+            role = str(role).lower()
+            if role not in {"user", "assistant"}:
+                continue
+
+            text = _extract_cursor_text(event)
+            if not text:
+                continue
+
+            processor = _process_learner_text if role == "user" else _process_assistant_text
+            cleaned, _notes = processor(text)
+            if not cleaned:
+                continue
+            if turns and turns[-1]["role"] == role and turns[-1]["text"] == cleaned:
+                continue
+
+            ts = event.get("timestamp") or event.get("created_at") or event.get("ts")
+            timestamp = ts if isinstance(ts, str) and ts else fallback_ts
+            turns.append(_make_turn(
+                session_id=session_id,
+                turn_index=len(turns),
+                role=role,
+                text=cleaned,
+                timestamp=timestamp,
+                model_id=None,
+            ))
+    return turns
 
 
 def _extract_cursor_text(event: dict[str, Any]) -> str | None:
@@ -118,6 +193,10 @@ def _parse_txt_candidates(path: Path) -> list[dict[str, Any]]:
                 "model_hint": None,
                 "_redaction_notes": notes,
             })
+    file_mtime = file_mtime_iso(path)
+    for candidate in candidates:
+        candidate["timestamp"] = file_mtime
+        candidate["_file_mtime"] = file_mtime
     return candidates
 
 

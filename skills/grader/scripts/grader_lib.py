@@ -232,7 +232,9 @@ def _content_to_text(content: Any) -> str | None:
     if isinstance(content, list):
         parts = []
         for block in content:
-            if isinstance(block, dict) and block.get("type") == "text":
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") in ("text", "input_text", "output_text"):
                 parts.append(str(block.get("text", "")))
         text = "\n".join(p for p in parts if p)
         return text or None
@@ -443,4 +445,54 @@ def parse_session_jsonl(path: Path) -> dict[str, Any]:
         "prompt_count": len(prompts),
         "signals": compute_signals(prompts, assistant_questions),
         "_redaction_notes": redaction_notes,
+    }
+
+
+def parse_session_turns(path: Path) -> dict[str, Any]:
+    """Return ordered user+assistant turns from a Claude session JSONL file."""
+    from datetime import datetime, timezone
+
+    fallback_ts = datetime.fromtimestamp(
+        path.stat().st_mtime, tz=timezone.utc
+    ).isoformat()
+    session_id = path.stem
+    turns: list[dict[str, Any]] = []
+    with path.open(encoding="utf-8", errors="ignore") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                ev = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if ev.get("sessionId"):
+                session_id = ev["sessionId"]
+            role: str | None = None
+            text: str | None = None
+            if ev.get("type") == "user":
+                origin = ev.get("origin") or {}
+                if origin and origin.get("kind") not in (None, "human"):
+                    continue
+                msg = ev.get("message") or {}
+                if msg.get("role") != "user":
+                    continue
+                text = _content_to_text(msg.get("content"))
+                role = "user"
+            elif ev.get("type") == "assistant":
+                msg = ev.get("message") or {}
+                text = _content_to_text(msg.get("content"))
+                role = "assistant"
+            if not role or not text or not str(text).strip():
+                continue
+            ts = ev.get("timestamp") or fallback_ts
+            turns.append({
+                "role": role,
+                "text": str(text).strip(),
+                "timestamp": ts,
+            })
+    return {
+        "session_id": session_id,
+        "started_at": turns[0]["timestamp"] if turns else None,
+        "turns": turns,
     }
