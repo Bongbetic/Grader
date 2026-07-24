@@ -4,7 +4,6 @@ Only allowlisted tool trees are permitted. No arbitrary walk outside those trees
 """
 from __future__ import annotations
 
-import glob
 import os
 from collections.abc import Mapping
 from pathlib import Path
@@ -63,12 +62,15 @@ def _cursor_paths(home: Path) -> list[Path]:
     import_dir = home / ".cursor" / "grader-import"
     if import_dir.is_dir():
         results.extend(import_dir.rglob("*.jsonl"))
-    # Cursor composer/agent transcripts.
-    pattern = home / ".cursor" / "projects" / "**" / "agent-transcripts" / "*"
-    for raw in glob.glob(str(pattern), recursive=True):
-        p = Path(raw)
-        if p.is_file() and p.suffix in {".jsonl", ".json", ".txt"}:
-            results.append(p)
+    # Cursor composer/agent transcripts (flat and nested <uuid>/<uuid>.jsonl).
+    projects = home / ".cursor" / "projects"
+    if projects.is_dir():
+        for transcripts_dir in projects.glob("**/agent-transcripts"):
+            if not transcripts_dir.is_dir():
+                continue
+            for path in transcripts_dir.rglob("*"):
+                if path.is_file() and path.suffix in {".jsonl", ".json", ".txt"}:
+                    results.append(path)
     return sorted(results)
 
 

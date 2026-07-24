@@ -5,6 +5,11 @@ import consent
 import grader_lib
 import allowlist
 import redact
+from adapters import _process_learner_text
+
+
+def _process_prompt(text: str) -> tuple[str, list[str]]:
+    return _process_learner_text(text)
 
 
 def discover(*, limit: int = 100) -> list[dict]:
@@ -23,14 +28,15 @@ def discover(*, limit: int = 100) -> list[dict]:
         session = grader_lib.parse_session_jsonl(path)
         timestamp = session.get("started_at") or session.get("ended_at") or ""
         for prompt in session.get("user_prompts") or []:
-            cleaned, notes = redact.redact_text(prompt)
-            cleaned, tnotes = grader_lib.truncate_prompt(cleaned)
+            cleaned, notes = _process_prompt(prompt)
+            if not cleaned:
+                continue
             candidates.append({
                 "text": cleaned,
                 "timestamp": timestamp,
                 "source_tool": "claude",
                 "model_hint": None,
-                "_redaction_notes": list({n for n in notes + tnotes}),
+                "_redaction_notes": notes,
             })
     return candidates
 
@@ -54,8 +60,9 @@ def discover_turns(*, limit: int = 100) -> list[dict]:
         session_id = str(session.get("session_id") or getattr(path, "stem", None) or path)
         timestamp = session.get("started_at") or session.get("ended_at") or ""
         for idx, prompt in enumerate(session.get("user_prompts") or []):
-            cleaned, _notes = redact.redact_text(prompt)
-            cleaned, _tnotes = grader_lib.truncate_prompt(cleaned)
+            cleaned, _notes = _process_prompt(prompt)
+            if not cleaned:
+                continue
             turns.append({
                 "session_id": session_id,
                 "turn_index": idx,

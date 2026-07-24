@@ -22,6 +22,15 @@ def test_import_paste_from_text(tmp_path):
     assert candidates[0]["source_tool"] == "import"
 
 
+def test_import_paste_sanitizes_boilerplate(tmp_path):
+    raw = (
+        "<manually_attached_skills>skill body</manually_attached_skills>\n"
+        "<user_query>paste me</user_query>"
+    )
+    candidates = import_paste.from_text(raw, source="paste")
+    assert candidates[0]["text"] == "paste me"
+
+
 def test_model_class_reasoning_keywords():
     assert model_class.classify("o1-preview") == "reasoning"
     assert model_class.classify("o3-mini") == "reasoning"

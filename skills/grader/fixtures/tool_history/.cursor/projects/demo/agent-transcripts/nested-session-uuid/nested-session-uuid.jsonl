@@ -1,0 +1,3 @@
+{"role": "user", "message": {"content": [{"type": "text", "text": "<manually_attached_skills>\nSkill Name: implement\n</manually_attached_skills>\n<user_query>nested cursor prompt</user_query>"}]}}
+{"role": "assistant", "message": {"content": [{"type": "text", "text": "Working on it."}]}}
+{"role": "user", "message": {"content": [{"type": "text", "text": "second nested turn"}]}}

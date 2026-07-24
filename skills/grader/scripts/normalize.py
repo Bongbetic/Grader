@@ -5,6 +5,7 @@ import hashlib
 
 import model_class
 import redact
+import sanitize
 from domain import PromptRecord
 
 _EXCERPT_LENGTH = 240
@@ -22,6 +23,7 @@ def to_prompt_record(candidate: dict, *, persist_raw: bool = False) -> PromptRec
     timestamp = candidate.get("timestamp") or ""
     model_hint = candidate.get("model_hint")
 
+    text, _sanitize_notes = sanitize.sanitize_learner_text(text)
     redacted_text, flags = redact.redact_text(text)
     excerpt = redacted_text[:_EXCERPT_LENGTH]
 

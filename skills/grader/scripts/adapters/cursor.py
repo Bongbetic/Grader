@@ -1,13 +1,15 @@
 """Cursor adapter: discover user prompts from exported Cursor transcripts."""
 from __future__ import annotations
 
+import json
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import consent
 import grader_lib
 import allowlist
-from adapters import _parse_jsonl_candidates
+from adapters import _extract_text, _process_learner_text
 
 
 def discover(*, home: Path | None = None, limit: int = 100) -> list[dict[str, Any]]:
@@ -24,10 +26,78 @@ def discover(*, home: Path | None = None, limit: int = 100) -> list[dict[str, An
     candidates: list[dict[str, Any]] = []
     for path in paths:
         if path.suffix in {".jsonl", ".json"}:
-            candidates.extend(_parse_jsonl_candidates(path, source_tool="cursor"))
+            candidates.extend(_parse_cursor_jsonl(path))
         elif path.suffix == ".txt":
             candidates.extend(_parse_txt_candidates(path))
     return candidates
+
+
+def _file_mtime_iso(path: Path) -> str:
+    ts = path.stat().st_mtime
+    return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
+
+
+def _parse_cursor_jsonl(path: Path) -> list[dict[str, Any]]:
+    """Parse Cursor agent-transcript JSONL (role + message.content[] shape)."""
+    prompts: list[dict[str, Any]] = []
+    timestamps: list[str] = []
+    fallback_ts = _file_mtime_iso(path)
+    with path.open(encoding="utf-8", errors="ignore") as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(event, dict):
+                continue
+
+            role = event.get("role")
+            if role is not None and str(role).lower() != "user":
+                continue
+
+            text = _extract_cursor_text(event)
+            if not text:
+                continue
+
+            cleaned, notes = _process_learner_text(text)
+            if not cleaned:
+                continue
+            if prompts and prompts[-1]["text"] == cleaned:
+                continue
+            prompts.append({
+                "text": cleaned,
+                "timestamp": "",
+                "source_tool": "cursor",
+                "model_hint": None,
+                "_redaction_notes": notes,
+            })
+            ts = event.get("timestamp") or event.get("created_at") or event.get("ts")
+            if ts and isinstance(ts, str):
+                timestamps.append(ts)
+
+    if not prompts:
+        return []
+    timestamp = timestamps[0] if timestamps else fallback_ts
+    for prompt in prompts:
+        prompt["timestamp"] = timestamp
+    return prompts
+
+
+def _extract_cursor_text(event: dict[str, Any]) -> str | None:
+    message = event.get("message")
+    if isinstance(message, dict):
+        content_text = grader_lib._content_to_text(message.get("content"))
+        if content_text:
+            return content_text.strip() or None
+
+    return (
+        _extract_text(event.get("text"))
+        or _extract_text(event.get("prompt"))
+        or _extract_text(event.get("message"))
+    )
 
 
 def _parse_txt_candidates(path: Path) -> list[dict[str, Any]]:
@@ -38,14 +108,15 @@ def _parse_txt_candidates(path: Path) -> list[dict[str, Any]]:
             text = line.strip()
             if not text:
                 continue
-            cleaned, notes = grader_lib.redact_secrets(text)
-            cleaned, tnotes = grader_lib.truncate_prompt(cleaned)
+            cleaned, notes = _process_learner_text(text)
+            if not cleaned:
+                continue
             candidates.append({
                 "text": cleaned,
                 "timestamp": "",
                 "source_tool": "cursor",
                 "model_hint": None,
-                "_redaction_notes": list({n for n in notes + tnotes}),
+                "_redaction_notes": notes,
             })
     return candidates
 

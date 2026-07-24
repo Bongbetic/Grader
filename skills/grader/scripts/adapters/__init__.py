@@ -7,6 +7,16 @@ from typing import Any
 
 import grader_lib
 import redact
+import sanitize
+
+
+def _process_learner_text(text: str) -> tuple[str, list[str]]:
+    """Sanitize, redact, and truncate learner-authored prompt text."""
+    cleaned, snotes = sanitize.sanitize_learner_text(text)
+    cleaned, rnotes = redact.redact_text(cleaned)
+    cleaned, tnotes = grader_lib.truncate_prompt(cleaned)
+    notes = list(dict.fromkeys([*snotes, *rnotes, *tnotes]))
+    return cleaned, notes
 
 
 def _extract_text(value: Any) -> str | None:
@@ -48,8 +58,9 @@ def _parse_jsonl_candidates(
             )
             if not text:
                 continue
-            cleaned, notes = redact.redact_text(text)
-            cleaned, tnotes = grader_lib.truncate_prompt(cleaned)
+            cleaned, notes = _process_learner_text(text)
+            if not cleaned:
+                continue
             if prompts and prompts[-1]["text"] == cleaned:
                 continue
             prompts.append({
@@ -57,7 +68,7 @@ def _parse_jsonl_candidates(
                 "timestamp": "",
                 "source_tool": source_tool,
                 "model_hint": model_hint,
-                "_redaction_notes": list({n for n in notes + tnotes}),
+                "_redaction_notes": notes,
             })
             ts = event.get("timestamp") or event.get("created_at") or event.get("ts")
             if ts and isinstance(ts, str):

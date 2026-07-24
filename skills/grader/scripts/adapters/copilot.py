@@ -9,6 +9,7 @@ import consent
 import grader_lib
 import allowlist
 import redact
+from adapters import _process_learner_text
 
 # Best-effort flag exposed for summary reporting.
 _partial: bool = False
@@ -78,8 +79,9 @@ def _parse_copilot_file(path: Path) -> list[dict[str, Any]]:
         text = _extract_text(event)
         if not text:
             continue
-        cleaned, notes = redact.redact_text(text)
-        cleaned, tnotes = grader_lib.truncate_prompt(cleaned)
+        cleaned, notes = _process_learner_text(text)
+        if not cleaned:
+            continue
         if prompts and prompts[-1]["text"] == cleaned:
             continue
         prompts.append({
@@ -87,7 +89,7 @@ def _parse_copilot_file(path: Path) -> list[dict[str, Any]]:
             "timestamp": "",
             "source_tool": "copilot",
             "model_hint": None,
-            "_redaction_notes": list({n for n in notes + tnotes}),
+            "_redaction_notes": notes,
         })
         ts = event.get("timestamp") or event.get("created_at") or event.get("ts")
         if ts and isinstance(ts, str):

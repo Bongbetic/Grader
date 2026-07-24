@@ -49,6 +49,49 @@ def test_cursor_discover_with_consent(grant, tmp_path):
     assert "cursor jsonl" in texts
     assert "cursor json" in texts
     assert "cursor message" in texts
+    assert "nested cursor prompt" in texts
+    assert "second nested turn" in texts
+
+
+def test_cursor_nested_paths_discovered(grant, tmp_path):
+    paths = allowlist.paths_for_tool("cursor", home=FIXTURES)
+    nested = [
+        p for p in paths
+        if p.parent.name == "nested-session-uuid"
+        and p.name == "nested-session-uuid.jsonl"
+    ]
+    assert nested
+
+
+def test_cursor_flat_only_glob_misses_nested(grant, tmp_path):
+    """Regression: one-level glob under agent-transcripts misses nested JSONL."""
+    import glob
+
+    home = FIXTURES
+    flat_pattern = str(home / ".cursor" / "projects" / "**" / "agent-transcripts" / "*")
+    flat_hits = {
+        Path(p).name
+        for p in glob.glob(flat_pattern, recursive=True)
+        if Path(p).is_file()
+    }
+    assert "nested-session-uuid.jsonl" not in flat_hits
+
+    paths = allowlist.paths_for_tool("cursor", home=home)
+    assert any(p.name == "nested-session-uuid.jsonl" for p in paths)
+
+
+def test_cursor_nested_sanitizes_skill_blocks(grant, tmp_path):
+    results = cursor_ad.discover(home=FIXTURES, limit=5)
+    nested = [r for r in results if r["text"] == "nested cursor prompt"]
+    assert nested
+    assert "implement" not in nested[0]["text"].lower()
+    assert "manually_attached" not in nested[0]["text"].lower()
+
+
+def test_cursor_skips_assistant_turns(grant, tmp_path):
+    results = cursor_ad.discover(home=FIXTURES, limit=5)
+    texts = {r["text"] for r in results}
+    assert "Working on it." not in texts
 
 
 def test_copilot_paths(grant, tmp_path):
