@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SKILL = ROOT / "skills" / "grader" / "SKILL.md"
 GRADE_FLOW = ROOT / "skills" / "grader" / "flows" / "grade.md"
 RUBRIC_SHEET = ROOT / "skills" / "grader" / "references" / "rubric-sheet.md"
+JUDGE_CONSISTENCY = ROOT / "skills" / "grader" / "references" / "judge-consistency.md"
 
 
 @pytest.fixture
@@ -34,6 +35,28 @@ def test_skill_md_exists_and_references_v3_rubric(skill_text):
     assert "consent" in skill_text
     assert "rubric-sheet" in skill_text
     assert "judge-schema" in skill_text
+    assert "judge-consistency" in skill_text
+
+
+def test_judge_consistency_policy_doc_exists():
+    assert JUDGE_CONSISTENCY.is_file()
+    text = JUDGE_CONSISTENCY.read_text(encoding="utf-8")
+    assert "model agnostic" in text.lower()
+    assert "deterministic" in text.lower()
+    assert "host-LLM judge JSON" in text
+    assert "heuristic" in text.lower()
+    assert "target_model_class" in text
+    assert "cross-class" in text.lower() or "cross class" in text.lower()
+    assert "scale playbook" in text.lower() or "flows/grade.md" in text
+
+
+def test_skill_md_forbids_heuristic_batch_judge(skill_text):
+    assert "host-LLM judge JSON per prompt" in skill_text
+    assert "heuristic batch" in skill_text.lower() or "no heuristic" in skill_text.lower()
+
+
+def test_grade_flow_links_judge_consistency_policy(grade_flow_text):
+    assert "judge-consistency" in grade_flow_text
 
 
 def test_skill_md_you_are_the_judge(skill_text):
@@ -125,6 +148,10 @@ def test_rubric_sheet_exists_and_covers_rubric(rubric_text):
     assert "Grade bands" in rubric_text or "Grade band" in rubric_text
     assert "Disqualifier" in rubric_text
     assert "Teaching layer" in rubric_text
+    assert "fair-terse-valid-continuation" in rubric_text
+    assert "adv-fake-criteria" in rubric_text
+    assert "adv-contradictory" in rubric_text
+    assert "judge-consistency" in rubric_text
 
 
 def test_v2_grade_sources_retired_from_skill_root():

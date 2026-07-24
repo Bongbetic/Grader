@@ -61,6 +61,8 @@ When intake returns **more than 30** candidates, default to a **representative s
 
 **Each graded prompt requires host-LLM judge JSON** — the agent running this flow scores every prompt individually. Heuristic batch judges, keyword rubrics, or scripted shortcuts are **out of scope** for learner-facing grades; they may exist only for internal dev calibration, never as a substitute for per-prompt judge output passed to `finalize_grade.py`.
 
+Full judge-consistency contract (deterministic vs stochastic layers, D5 cross-class policy): `references/judge-consistency.md`. Related: batch sampling + per-prompt judge policy (issue #20).
+
 ## 3. Judge each prompt
 
 **You are the judge.** The agent running this skill scores each prompt — there is no external judge service. Do not use heuristic batch scripts or automated rubric shortcuts for learner-facing grades; every prompt needs full dimension JSON from the host model.

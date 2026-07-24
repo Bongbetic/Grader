@@ -203,6 +203,22 @@ treat missing repeated background as a defect. Reserve D2 = 0–1 for
 
 This is the "was there upside left on the table?" test, not "did the agent cope anyway?"
 
+### Gold-set calibration anchors
+
+Use these fixture IDs when calibrating proportionality and adversarial floors (`fixtures/gold/`). They do not replace per-prompt judge JSON at runtime — they anchor expected judge behavior.
+
+| ID | File | What it tests |
+|----|------|---------------|
+| `fair-terse-valid-continuation` | `fairness.jsonl` | Terse `valid_continuation` ("commit and push") — D2 = 2 proportional, not zeroed; band A/B, not D |
+| `adv-fake-criteria` | `adversarial.jsonl` | Vague success criteria — low D1/D3; band C/D |
+| `adv-contradictory` | `adversarial.jsonl` | Internal contradiction — set `internal_contradiction` disqualifier; band C/D |
+| `adv-fake-sources` | `adversarial.jsonl` | Fact-critical task, bad grounding — low D8/D11; band C/D |
+| `adv-useless-plan-trivial` | `adversarial.jsonl` | Over-investment on trivial task — low D6; band C/D |
+
+Judge JSON mirror for the fairness anchor: `fixtures/judge/fair_terse_valid_continuation.json`.
+
+See `references/judge-consistency.md` for the deterministic vs stochastic layer contract.
+
 ## Convention checklists
 
 **D4 — structure conventions.** Reward: role/context/task/format completeness
@@ -216,3 +232,8 @@ divergence:
 - Reasoning model → penalize explicit "think step by step" and few-shot (they
   degrade it); reward lean prompt + effort/verbosity parameters.
 - Do not reward brand-specific tag gimmicks (e.g. mandatory XML) — deprecated as a default.
+
+**D5 scores are not cross-class comparable by design.** A prompt judged under
+`standard` vs `reasoning` uses different D5 expectations. Segment trends and
+comparisons by `target_model_class`. When class is `unknown`, exclude D5 from
+the denominator (AS-005) — see `judge-consistency.md`.

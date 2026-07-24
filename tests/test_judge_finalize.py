@@ -251,3 +251,56 @@ def test_fair_terse_valid_continuation_finalize_not_band_d():
     assert report.band != "D"
     assert report.band in ("B", "C")
     assert levels["D2"] == 2
+
+
+@pytest.mark.parametrize(
+    "fixture_name,model_class,expected_band,expected_percent",
+    [
+        ("valid_after.json", "standard", "A", 91.67),
+        ("fair_terse_valid_continuation.json", "standard", "C", 70.83),
+    ],
+)
+def test_fixed_judge_fixtures_produce_stable_band(
+    fixture_name, model_class, expected_band, expected_percent
+):
+    """CI regression: deterministic math layer — same judge JSON → same band/percent."""
+    data = _load(JUDGE_FIXTURES / fixture_name)
+    scores, rationales, flags = parse_judge_output(data)
+    report = build_grade_report("stable-band-test", scores, rationales, flags, model_class)
+    assert report.band == expected_band
+    assert round(report.percent, 2) == expected_percent
+
+
+@pytest.mark.parametrize(
+    "fixture_name,model_class,expected_band,expected_percent",
+    [
+        ("valid_after.json", "standard", "A", 91.67),
+        ("fair_terse_valid_continuation.json", "standard", "C", 70.83),
+    ],
+)
+def test_finalize_grade_cli_stable_band_from_fixtures(
+    fixture_name, model_class, expected_band, expected_percent, tmp_path, monkeypatch
+):
+    """CLI path: fixed judge JSON fixtures → stable band from finalize_grade."""
+    monkeypatch.setenv("GRADER_HOME", str(tmp_path))
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(CLI),
+            "--judge",
+            str(JUDGE_FIXTURES / fixture_name),
+            "--prompt-id",
+            f"stable-{fixture_name}",
+            "--excerpt",
+            "fixture regression",
+            "--model-class",
+            model_class,
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    report = json.loads(proc.stdout)
+    assert report["band"] == expected_band
+    assert round(report["percent"], 2) == expected_percent

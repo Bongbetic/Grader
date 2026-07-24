@@ -21,6 +21,7 @@ Audience: engineering students who ship real side-projects with Claude Code, Cur
 - No token/cost metrics. Do not use token counts, cost, spend, cache, model tier, or latency as grading inputs or report fields.
 - Grade against the 11-dimension rubric in `references/rubric-sheet.md` (D1–D11). Retire the v2 Prompt-DNA / checklist path.
 - Hybrid scoring: **you** (the current agent) return dimension levels, N/A marks, rationales, and disqualifier flags as JSON; Python always recomputes percent, band, and caps via `scripts/finalize_grade.py`.
+- **Judge consistency:** learner-facing grades require **host-LLM judge JSON per prompt** — no heuristic batch substitute. Deterministic math/render is host-model-independent; dimension levels are not guaranteed identical across judging models. See `references/judge-consistency.md`.
 - Consent first. Auto-discover reads only allowlisted local tool-history paths after the user grants per-tool consent. Show a scan summary and wait for the user to proceed before grading.
 - Grade-then-discard by default: persist scores, redacted excerpt, and metadata; store raw text only on opt-in. Secrets and emails are redacted before any transmit or storage.
 - Do not upload transcripts to third parties.
@@ -134,8 +135,24 @@ Hosts: `claude`, `cursor`, `codex`, `copilot`, or `all`. Auto-detect uses enviro
 - `scripts/model_class.py` — infer `standard` / `reasoning` / `unknown` target model class.
 - `scripts/store.py` / `scripts/retention.py` — local `~/.grader` store + 30-day purge.
 
+## Judge consistency (model agnostic)
+
+Grader splits scoring into two layers (full contract in `references/judge-consistency.md`):
+
+| Layer | Owner | Stable across host models? |
+|-------|-------|--------------------------|
+| Percent, band, caps, render | Python (`score_math`, `finalize_grade`, renderers) | Yes — same judge JSON → same grade |
+| Dimension levels, classification, rationales | Host LLM (you) | No — different judges may disagree |
+
+**Hard rule:** every learner-facing grade flows from **per-prompt host-LLM judge JSON** passed to `finalize_grade.py`. Heuristic batch judges, keyword rubrics, and scripted dimension shortcuts are **forbidden** as substitutes (internal dev calibration only).
+
+**D5** depends on `target_model_class` by design — D5 scores are not cross-class comparable. When class is `unknown`, D5 is excluded from the denominator (AS-005).
+
+At scale (>30 prompts), sample per `flows/grade.md` scale playbook; each sampled prompt still needs full judge JSON.
+
 ## References
 
+- `references/judge-consistency.md` — deterministic vs stochastic layers; no-heuristic rule; D5 cross-class policy; batch playbook link.
 - `references/rubric-sheet.md` — full judge-facing rubric and teaching fixes.
 - `references/judge-schema.json` — JSON schema for the host model's grade output.
 - `prompt-quality-research-and-rubric.md` — research synthesis and rubric source.
