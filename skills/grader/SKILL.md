@@ -132,7 +132,7 @@ Hosts: `claude`, `cursor`, `codex`, `copilot`, or `all`. Auto-detect uses enviro
 - `scripts/judge_schema.py` — validate and parse the host model's structured output.
 - `scripts/score_math.py` — pure weighted percent/band/caps computation.
 - `scripts/normalize.py` — redact + normalize any adapter output into a `PromptRecord`.
-- `scripts/model_class.py` — infer `standard` / `reasoning` / `unknown` target model class.
+- `scripts/model_class.py` — infer `standard` / `reasoning` / `unknown`; `resolve` applies learner pin when intake `model_hint` is missing (Cursor).
 - `scripts/store.py` / `scripts/retention.py` — local `~/.grader` store + 30-day purge.
 
 ## Judge consistency (model agnostic)

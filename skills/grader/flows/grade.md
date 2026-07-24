@@ -114,16 +114,19 @@ Example judge JSON shape:
 
 Before `finalize_grade.py`, resolve `--model-class` for each prompt:
 
-1. Read `target_model_class` from the `PromptRecord` (set by `model_class.classify(model_hint)` during normalize).
-2. If `unknown`, ask the Learner which model class the prompt targeted (`standard` or `reasoning`). If they skip or cannot say, keep `unknown` (AS-005: D5 excluded from the score denominator; `wrong_model_class` cap suppressed).
-3. To re-classify from a model hint, use `scripts/model_class.py`:
+1. Prefer intake `model_hint` when present — `normalize` sets `PromptRecord.target_model_class` via `model_class.classify(model_hint)`.
+2. **Cursor (and other adapters) often ship `model_hint=None`**, so `target_model_class` is `unknown`. Before judging or finalizing, ask the Learner which model class the prompt targeted (`standard` or `reasoning`). For a shared Cursor history sample / batch, one pin may apply to the whole sample when the Learner says so.
+3. Apply the pin with `model_class.resolve` so learner-supplied class reaches `--model-class` (D5 stays assessable; model-fit coaching works):
 
 ```python
 import model_class
-model_class.classify("gpt-4o")  # "standard"
-model_class.classify("o1-preview")  # "reasoning"
-model_class.classify(None)  # "unknown"
+model_class.resolve("gpt-4o")  # "standard" from hint
+model_class.resolve("o1-preview")  # "reasoning" from hint
+model_class.resolve(None, learner_class="standard")  # Cursor-like: learner pin
+model_class.resolve(None, learner_class=None)  # skip → "unknown"
 ```
+
+4. If they skip or cannot say, keep `unknown`. **Do not silently drop D5:** tell the Learner AS-005: D5 excluded from the score denominator (`wrong_model_class` cap suppressed) and that pinning `standard` or `reasoning` unlocks D5 / model-fit coaching.
 
 When session context exists for this prompt, build Efficacy and Planning JSON (report-shaped fields from [Wire efficacy planning and outcome modifier into finalize](https://github.com/Bongbetic/Grader/issues/9)) and pass both. When either is missing, omit that flag — finalize marks the axis `unavailable` with `no session context`.
 
@@ -247,7 +250,9 @@ During a grade run, intermediate files may land under `scripts/` or a host temp 
 
 ## 6. Offer practice or coach
 
-After grading, offer the user a choice:
+**Required after every grade path** — single prompt, multi-prompt batch, and session rollup (including the default ≤30 sample). Do not end the session after rollup render or temp cleanup alone.
+
+After grading (and after rollup when used), offer the Learner a choice:
 
 - Run `flows/practice.md` on the weakest scored dimension.
 - Run `flows/coach.md` for a deeper rewrite session.

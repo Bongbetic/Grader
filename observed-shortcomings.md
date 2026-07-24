@@ -30,7 +30,7 @@ Epic #15 lands multi-tool intake + tri-pane + judge-consistency (children #16–
 | C-01 | fixed | Proportionality lens under-applied for terse trivial/simple tasks. | `grade.md` + `rubric-sheet.md` require classification block; D1/D3/D6 proportional. |
 | C-02 | open | Length still correlates with score in practice (host-judge bias). | Policy + gold fixtures mitigate; host models may still over-weight length. Tracked: #26 (parent #23). |
 | C-03 | fixed | D2 under-scored for valid continuations. | Proportionality scores D2 for `valid_continuation`; gold fixture `fair-terse-valid-continuation`. |
-| C-04 | open | `target_model_class` often `unknown` for Cursor — D5 excluded; model-fit coaching weak. | Grade flow asks learner for model class when unknown; intake still lacks reliable hint. Tracked: #24 (parent #23). |
+| C-04 | fixed | `target_model_class` often `unknown` for Cursor — D5 excluded; model-fit coaching weak. | `model_class.resolve` + grade flow prompt before finalize; AS-005 disclosed when skip. Tracked: #24 (parent #23). |
 | C-05 | fixed | Large batches used heuristic judge scripts. | Policy forbids heuristic learner-facing grades; host-LLM JSON per prompt required (`judge-consistency.md`). |
 | C-06 | fixed | No official batch grade path — hosts improvised scripts. | Sample ≤30 default + `--reports-manifest` playbook in `grade.md`. |
 
@@ -67,7 +67,7 @@ Epic #15 lands multi-tool intake + tri-pane + judge-consistency (children #16–
 | U-01 | fixed | No recommended sample size for large corpora. | Default ≤30 with learner opt-in for full corpus. |
 | U-02 | open | No per-prompt drill-down UI after batch (session rollup only). | Tracked: #27 (parent #23). |
 | U-03 | open | `trends_report.py` noisy after bulk persist. | Tracked: #28 (parent #23). |
-| U-04 | open | Coach/Practice offer skipped when batch consumed the session. | Tracked: #25 (parent #23). |
+| U-04 | fixed | Coach/Practice offer skipped when batch consumed the session. | Grade flow §6 required after batch/rollup (incl. ≤30 sample). Tracked: #25 (parent #23). |
 
 ---
 
@@ -75,7 +75,7 @@ Epic #15 lands multi-tool intake + tri-pane + judge-consistency (children #16–
 
 Parent epic: **#23**. Queue lives on GitHub — not this table alone.
 
-1. **Frontier:** #24 (C-04), #25 (U-04) — `ready-for-agent` → `/implement`.
+1. **Frontier (shipped):** #24 (C-04), #25 (U-04) — closed via `/implement`.
 2. **Grill first:** #29 (I-08), #26 (C-02), #27 (U-02), #28 (U-03).
 3. On each close: flip ID to `fixed` here in the same commit.
 

@@ -122,6 +122,30 @@ def test_grade_flow_asks_model_class_when_unknown(grade_flow_text):
     assert "target_model_class" in grade_flow_text
 
 
+def test_grade_flow_cursor_unknown_prompts_before_finalize(grade_flow_text):
+    """C-04: Cursor-like intake (no model_hint) must prompt before finalize."""
+    lower = grade_flow_text.lower()
+    assert "model_hint" in grade_flow_text
+    assert "cursor" in lower
+    assert "model_class.resolve" in grade_flow_text
+    assert "ask the learner" in lower
+    # AS-005 must be coached, not silent when learner keeps unknown
+    assert "d5" in lower and ("excluded" in lower or "exclude" in lower)
+    assert "model-fit" in lower or "model fit" in lower or "d5 coaching" in lower
+
+
+def test_grade_flow_offers_coach_practice_after_batch_rollup(grade_flow_text):
+    """U-04: Coach/Practice offer required after batch/rollup, including ≤30 sample."""
+    lower = grade_flow_text.lower()
+    assert "offer practice or coach" in lower
+    assert "session rollup" in lower
+    assert "flows/practice.md" in grade_flow_text
+    assert "flows/coach.md" in grade_flow_text
+    # Must not end after rollup alone
+    assert "do not end" in lower or "required after" in lower
+    assert "≤30" in grade_flow_text or "<=30" in grade_flow_text or "up to 30" in lower
+
+
 def test_grade_flow_renderer_only_playbook(grade_flow_text):
     """Host must judge → finalize → enrich/slots → render; never freestyle narrate."""
     lower = grade_flow_text.lower()
