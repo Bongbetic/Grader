@@ -1,0 +1,17 @@
+{
+  "dimensions": {
+    "D2": { "level": 3, "rationale": "Rich context and motivation." },
+    "D3": { "level": 3, "rationale": "Specific constraints present." },
+    "D4": { "level": 3, "rationale": "Output format specified." },
+    "D5": { "level": 2, "rationale": "Appropriate model fit." },
+    "D6": { "level": 3, "rationale": "Economical and clear." },
+    "D7": { "level": 2, "rationale": "Testable and iteration-ready." },
+    "D8": { "level": "N/A", "rationale": "not fact-critical" },
+    "D9": { "level": "N/A", "rationale": "no examples needed" },
+    "D10": { "level": 3, "rationale": "Voice appropriate." },
+    "D11": { "level": 3, "rationale": "Safety guards present." }
+  },
+  "disqualifiers": [],
+  "percent": 99,
+  "band": "A"
+}

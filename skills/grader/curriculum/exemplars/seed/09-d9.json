@@ -1,0 +1,7 @@
+{
+  "id": "seed-d9-01",
+  "dimension": "D9",
+  "before": "Extract dates from the text in the same format.",
+  "after": "Extract dates from the text and return them as YYYY-MM-DD.\n\nExample input: 'Meeting on March 2, 2024.'\nExample output: '2024-03-02'",
+  "origin": "seed"
+}

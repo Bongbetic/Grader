@@ -1,0 +1,7 @@
+{
+  "id": "seed-d6-01",
+  "dimension": "D6",
+  "before": "I need you to write a really great and comprehensive and thorough summary that covers everything in the document and makes sure nothing is missed, please be detailed and do not leave anything out.",
+  "after": "Summarize the document in three bullet points. Each bullet must state one claim and the evidence that supports it.",
+  "origin": "seed"
+}

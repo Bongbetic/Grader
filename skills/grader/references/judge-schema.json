@@ -1,0 +1,72 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Grader v3 Judge Output",
+  "description": "Structured rubric judgment from the host model. percent and band are ignored by the grader; Python recomputes them from dimension levels.",
+  "type": "object",
+  "required": ["dimensions"],
+  "properties": {
+    "dimensions": {
+      "type": "object",
+      "properties": {
+        "D1": { "$ref": "#/definitions/dimension" },
+        "D2": { "$ref": "#/definitions/dimension" },
+        "D3": { "$ref": "#/definitions/dimension" },
+        "D4": { "$ref": "#/definitions/dimension" },
+        "D5": { "$ref": "#/definitions/dimension" },
+        "D6": { "$ref": "#/definitions/dimension" },
+        "D7": { "$ref": "#/definitions/dimension" },
+        "D8": { "$ref": "#/definitions/dimension" },
+        "D9": { "$ref": "#/definitions/dimension" },
+        "D10": { "$ref": "#/definitions/dimension" },
+        "D11": { "$ref": "#/definitions/dimension" }
+      },
+      "required": ["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11"],
+      "additionalProperties": false
+    },
+    "disqualifiers": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "percent": { "type": "number" },
+    "band": { "type": "string" },
+    "classification": {
+      "type": "object",
+      "description": "Optional judge classification block. Every entry requires evidence_span and confidence.",
+      "properties": {
+        "classifier_version": { "type": "string" },
+        "task_complexity": { "$ref": "#/definitions/classificationEntry" },
+        "prompt_class": { "$ref": "#/definitions/classificationEntry" },
+        "follow_up_type": { "$ref": "#/definitions/classificationEntry" },
+        "scope_change": { "$ref": "#/definitions/classificationEntry" },
+        "rework_cause": { "$ref": "#/definitions/classificationEntry" }
+      },
+      "required": ["classifier_version", "task_complexity"]
+    }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "dimension": {
+      "type": "object",
+      "required": ["level"],
+      "properties": {
+        "level": {
+          "oneOf": [
+            { "type": "integer", "minimum": 0, "maximum": 3 },
+            { "type": "string", "enum": ["N/A"] }
+          ]
+        },
+        "rationale": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "classificationEntry": {
+      "type": "object",
+      "properties": {
+        "value": { "type": "string" },
+        "evidence_span": { "type": "string" },
+        "confidence": { "type": "string", "enum": ["low", "medium", "high"] }
+      },
+      "required": ["value", "evidence_span", "confidence"]
+    }
+  }
+}

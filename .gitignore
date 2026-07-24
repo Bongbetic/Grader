@@ -1,0 +1,13 @@
+__pycache__/
+.pytest_tmp/
+.superpowers/
+docs/
+dist/
+graphify-out/
+
+# Internal planning docs (not published on GitHub)
+Grader-v3-SRS.md
+Grader-v3-acceptance.md
+Grader-v3-design.md
+Grader-v3-plan.md
+v2plan.md

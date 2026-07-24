@@ -1,0 +1,7 @@
+{
+  "id": "seed-d11-01",
+  "dimension": "D11",
+  "before": "Generate a medical advice response for the user.",
+  "after": "If the user's question involves medical decisions, explain that you cannot give medical advice and suggest speaking to a professional. If you are unsure about any factual claim, say so rather than guessing. Before finalizing, verify that every recommendation is supported by the provided context.",
+  "origin": "seed"
+}

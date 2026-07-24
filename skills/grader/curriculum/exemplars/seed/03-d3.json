@@ -1,0 +1,7 @@
+{
+  "id": "seed-d3-01",
+  "dimension": "D3",
+  "before": "Give me some ideas for the project.",
+  "after": "Suggest 5 project ideas for a 2-week individual side project in Python. Constraints: no external APIs, must include a CLI, must be under 500 lines. Avoid ideas that require GPU access.",
+  "origin": "seed"
+}

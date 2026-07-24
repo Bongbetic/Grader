@@ -1,0 +1,7 @@
+{
+  "id": "seed-d5-01",
+  "dimension": "D5",
+  "before": "Think step by step and explain every reasoning stage in detail. (sent to a reasoning model)",
+  "after": "Solve the proof directly. Target model: reasoning. Keep the prompt lean; do not force chain-of-thought. Set reasoning effort to medium.",
+  "origin": "seed"
+}

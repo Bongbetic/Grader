@@ -1,0 +1,7 @@
+{
+  "id": "seed-d2-01",
+  "dimension": "D2",
+  "before": "Write a tutorial on Python dictionaries.",
+  "after": "Write a 600-word tutorial on Python dictionaries for second-year CS students who have seen lists but not hash maps. The tutorial will be used as a lecture handout, so keep examples runnable and explain why dictionaries trade memory for speed.",
+  "origin": "seed"
+}

@@ -1,0 +1,7 @@
+{
+  "id": "seed-d4-01",
+  "dimension": "D4",
+  "before": "Format the output so it is easy to read.",
+  "after": "Return the plan as a JSON object with exactly these keys: summary, steps, risks, estimate. Each step must be a string under 120 characters. Do not add keys outside this schema.",
+  "origin": "seed"
+}

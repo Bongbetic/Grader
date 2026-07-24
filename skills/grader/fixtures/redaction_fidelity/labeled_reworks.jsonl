@@ -1,0 +1,4 @@
+{"id": "u1", "label": "user_under_specified", "text": "no wait I actually meant the admin dashboard not the user one", "cue_tokens": ["meant", "not"]}
+{"id": "a1", "label": "agent_misread", "text": "that's not what I asked, you changed the wrong file again", "cue_tokens": ["not what I asked", "wrong file"]}
+{"id": "u2", "label": "user_under_specified", "text": "let me re-explain: it should also handle the empty list case", "cue_tokens": ["re-explain", "should also"]}
+{"id": "a2", "label": "agent_misread", "text": "you misunderstood, I never said to delete the tests", "cue_tokens": ["misunderstood", "never said"]}

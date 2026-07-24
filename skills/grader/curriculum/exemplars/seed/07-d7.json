@@ -1,0 +1,7 @@
+{
+  "id": "seed-d7-01",
+  "dimension": "D7",
+  "before": "Make this prompt better.",
+  "after": "Improve the prompt so that a grader gives D1 and D3 both level 3. Change only the objective and constraints; keep the model class and format unchanged. Pass = the rewritten prompt scores 3 on both dimensions.",
+  "origin": "seed"
+}

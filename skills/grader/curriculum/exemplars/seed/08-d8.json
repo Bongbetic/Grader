@@ -1,0 +1,7 @@
+{
+  "id": "seed-d8-01",
+  "dimension": "D8",
+  "before": "What are the main causes of the 2021 supply chain shortage?",
+  "after": "Answer using only the source article below. Cite the relevant passage for each cause. If the article does not cover a cause, say 'not covered' instead of inventing it.\n\nSOURCE:\n\"\"\"\n[article text here]\n\"\"\"",
+  "origin": "seed"
+}

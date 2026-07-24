@@ -1,0 +1,395 @@
+/* PROTOTYPE — throwaway styles for grade_report UI variants */
+
+:root {
+  --ink: #12141a;
+  --muted: #5c6478;
+  --line: #d8dde8;
+  --paper: #f7f6f2;
+  --band-b: #1f6f5b;
+  --band-c: #a15c12;
+  --danger: #9b1c1c;
+  --ok: #1f6f5b;
+  --slot: #e8eef8;
+  --switcher-bg: #0e1016;
+  --switcher-fg: #f4f5f8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: #eceae4;
+}
+
+#app {
+  min-height: 100vh;
+  padding-bottom: 5.5rem;
+}
+
+.state-dump {
+  position: fixed;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 40;
+  max-width: 18rem;
+  font: 11px/1.35 ui-monospace, "Cascadia Code", monospace;
+  background: rgba(14, 16, 22, 0.92);
+  color: #d7dde8;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.4rem;
+  white-space: pre-wrap;
+}
+
+.prototype-banner {
+  font: 12px/1.3 ui-monospace, monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: #2a2118;
+  color: #f3e6d4;
+  padding: 0.45rem 1rem;
+}
+
+/* ——— Switcher ——— */
+.prototype-switcher {
+  position: fixed;
+  left: 50%;
+  bottom: 1rem;
+  transform: translateX(-50%);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 999px;
+  background: var(--switcher-bg);
+  color: var(--switcher-fg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  font: 13px/1 "IBM Plex Sans", sans-serif;
+}
+
+.prototype-switcher button {
+  appearance: none;
+  border: 0;
+  background: #2a2f3c;
+  color: inherit;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.prototype-switcher button:hover {
+  background: #3a4152;
+}
+
+.prototype-switcher .label {
+  min-width: 12rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ——— Shared bits ——— */
+.band-letter {
+  font-weight: 700;
+  line-height: 0.9;
+}
+
+.meta-muted {
+  color: var(--muted);
+}
+
+.slot-box {
+  border: 1px dashed #7f8aaa;
+  background: var(--slot);
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.35rem;
+}
+
+.slot-box .hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.security-hit {
+  border-left: 4px solid var(--danger);
+  background: #f8e8e8;
+  padding: 0.75rem 1rem;
+}
+
+.security-ok {
+  border-left: 4px solid var(--ok);
+  background: #e7f3ee;
+  padding: 0.75rem 1rem;
+}
+
+.callout-neg {
+  color: var(--danger);
+}
+
+.callout-pos {
+  color: var(--ok);
+}
+
+.dim-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.dim-table th,
+.dim-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 0.4rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.dim-table th {
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ========== VARIANT A — Linear dossier ========== */
+.variant-a {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 2rem;
+  background: var(--paper);
+  min-height: calc(100vh - 2rem);
+  box-shadow: 0 0 0 1px #d3cfc4;
+}
+
+.variant-a .title {
+  font-family: "IBM Plex Serif", Georgia, serif;
+  font-size: 1.75rem;
+  margin: 0 0 0.35rem;
+}
+
+.variant-a .lede {
+  color: var(--muted);
+  margin-bottom: 1.5rem;
+}
+
+.variant-a .craft-head {
+  display: flex;
+  gap: 1.25rem;
+  align-items: flex-end;
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.variant-a .band-letter {
+  font-size: 5.5rem;
+  color: var(--band-c);
+}
+
+.variant-a h2 {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 1.5rem 0 0.6rem;
+  color: var(--muted);
+}
+
+.variant-a .excerpt {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  background: #efece4;
+  padding: 0.75rem;
+  border-radius: 0.25rem;
+}
+
+/* ========== VARIANT B — Tri-pane cockpit ========== */
+.variant-b {
+  min-height: calc(100vh - 2rem);
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  background: #10131a;
+  color: #e8ecf4;
+}
+
+.variant-b .topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #2a3142;
+  background: #161a24;
+}
+
+.variant-b .band-letter {
+  font-size: 3rem;
+  color: #f0a35e;
+}
+
+.variant-b .panes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: #2a3142;
+  min-height: 22rem;
+}
+
+.variant-b .pane {
+  background: #151924;
+  padding: 1rem 1.1rem;
+}
+
+.variant-b .pane h2 {
+  margin: 0 0 0.75rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8b95ab;
+}
+
+.variant-b .metric {
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+  margin: 0.2rem 0;
+}
+
+.variant-b .dims {
+  padding: 0.75rem 1.25rem 1rem;
+  overflow: auto;
+  background: #0e1118;
+}
+
+.variant-b .dim-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.variant-b .chip {
+  border: 1px solid #333b4f;
+  border-radius: 999px;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.78rem;
+  color: #b7c0d4;
+}
+
+.variant-b .chip.na {
+  opacity: 0.45;
+}
+
+.variant-b .coaching {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: #2a3142;
+}
+
+.variant-b .coaching .slot-box {
+  background: #1a2030;
+  border: 0;
+  border-radius: 0;
+  min-height: 5.5rem;
+  color: #c5cee0;
+}
+
+.variant-b .security-hit,
+.variant-b .security-ok {
+  margin: 0;
+  border-radius: 0;
+}
+
+.variant-b .meta-muted {
+  color: #8b95ab;
+}
+
+@media (max-width: 900px) {
+  .variant-b .panes,
+  .variant-b .coaching {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ========== VARIANT C — Focus rail ========== */
+.variant-c {
+  display: grid;
+  grid-template-columns: minmax(16rem, 38%) 1fr;
+  min-height: calc(100vh - 2rem);
+  background: #f3f7f8;
+}
+
+.variant-c .focus {
+  background: #0b3d4a;
+  color: #eaf6f8;
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.variant-c .band-letter {
+  font-size: 7rem;
+  color: #7fd4c7;
+}
+
+.variant-c .modifier {
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  padding-top: 1rem;
+  font-size: 0.95rem;
+}
+
+.variant-c .rail {
+  padding: 1.25rem 1.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.variant-c .card {
+  background: #fff;
+  border: 1px solid #c9d7dc;
+  border-radius: 0.15rem;
+  padding: 0.9rem 1rem;
+}
+
+.variant-c .card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #5f7a82;
+}
+
+.variant-c .dims-compact {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+  gap: 0.4rem;
+}
+
+.variant-c .dim-cell {
+  background: #eef4f5;
+  padding: 0.45rem;
+  text-align: center;
+  font-size: 0.8rem;
+}
+
+.variant-c .dim-cell strong {
+  display: block;
+  font-size: 1.1rem;
+}
+
+@media (max-width: 800px) {
+  .variant-c {
+    grid-template-columns: 1fr;
+  }
+}

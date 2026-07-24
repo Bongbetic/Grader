@@ -1,0 +1,7 @@
+{
+  "id": "seed-d1-02",
+  "dimension": "D1",
+  "before": "Fix the code.",
+  "after": "Refactor the function below so all tests in tests/test_auth.py pass and no exception is swallowed. Success: pytest tests/test_auth.py passes with no warnings.",
+  "origin": "seed"
+}
