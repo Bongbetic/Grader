@@ -323,6 +323,36 @@ def _modifier_reason(reports: list[dict[str, Any]]) -> str:
     return f"rollup:{len(reports)} prompts; {len(changed)} modified"
 
 
+def load_reports_manifest(manifest_path: Path) -> list[Path]:
+    """Load report file paths from a JSON manifest (array of path strings)."""
+    try:
+        data = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise ValueError(f"manifest file not found: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"manifest is not valid JSON: {exc}") from exc
+    if not isinstance(data, list):
+        raise ValueError("manifest must be a JSON array of report paths")
+    paths: list[Path] = []
+    for i, entry in enumerate(data):
+        if not isinstance(entry, str) or not entry.strip():
+            raise ValueError(f"manifest[{i}] must be a non-empty path string")
+        paths.append(Path(entry))
+    return paths
+
+
+def _load_report(path: Path) -> dict[str, Any]:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise ValueError(f"report file not found: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"report is not valid JSON: {exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"report must be a JSON object: {path}")
+    return data
+
+
 def compose_session_rollup(
     reports: list[dict[str, Any]],
     *,
@@ -391,12 +421,17 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Compose finalized per-prompt grade JSON into a session rollup"
     )
-    parser.add_argument(
+    report_source = parser.add_mutually_exclusive_group(required=True)
+    report_source.add_argument(
         "--reports",
         type=Path,
         nargs="+",
-        required=True,
         help="Paths to finalized per-prompt grade-report JSON files",
+    )
+    report_source.add_argument(
+        "--reports-manifest",
+        type=Path,
+        help="JSON file listing report paths (array of strings; use for 500+ reports on Windows)",
     )
     parser.add_argument(
         "--intake-json",
@@ -409,20 +444,22 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    reports: list[dict[str, Any]] = []
-    for path in args.reports:
+    if args.reports_manifest is not None:
         try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except FileNotFoundError as exc:
-            print(f"error: report file not found: {exc}", file=sys.stderr)
+            report_paths = load_reports_manifest(args.reports_manifest)
+        except ValueError as exc:
+            print(f"error: {exc}", file=sys.stderr)
             return 1
-        except json.JSONDecodeError as exc:
-            print(f"error: report is not valid JSON: {exc}", file=sys.stderr)
+    else:
+        report_paths = list(args.reports)
+
+    reports: list[dict[str, Any]] = []
+    for path in report_paths:
+        try:
+            reports.append(_load_report(path))
+        except ValueError as exc:
+            print(f"error: {exc}", file=sys.stderr)
             return 1
-        if not isinstance(data, dict):
-            print(f"error: report must be a JSON object: {path}", file=sys.stderr)
-            return 1
-        reports.append(data)
 
     intake: dict[str, Any] | None = None
     if args.intake_json is not None:

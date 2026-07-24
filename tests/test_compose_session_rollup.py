@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from compose_session_rollup import compose_session_rollup
+from compose_session_rollup import compose_session_rollup, load_reports_manifest
 from render_grade_md import render_grade_markdown
 
 
@@ -311,4 +311,60 @@ def test_cli_composes_json(tmp_path: Path):
     data = json.loads(proc.stdout)
     assert data["grain"] == "session_rollup"
     assert data["prompt_id"] == "cli-sess"
+    assert data["member_prompt_ids"] == ["p1", "p2"]
+
+
+def test_load_reports_manifest_parses_500_plus_paths(tmp_path: Path):
+    paths = [str(tmp_path / f"report-{i:04d}.json") for i in range(501)]
+    manifest = tmp_path / "reports-manifest.json"
+    manifest.write_text(json.dumps(paths), encoding="utf-8")
+
+    loaded = load_reports_manifest(manifest)
+
+    assert len(loaded) == 501
+    assert loaded[0] == Path(paths[0])
+    assert loaded[-1] == Path(paths[-1])
+
+
+def test_load_reports_manifest_rejects_non_array(tmp_path: Path):
+    bad = tmp_path / "bad-manifest.json"
+    bad.write_text(json.dumps({"reports": []}), encoding="utf-8")
+    with pytest.raises(ValueError, match="JSON array"):
+        load_reports_manifest(bad)
+
+
+def test_cli_accepts_reports_manifest(tmp_path: Path):
+    r1 = tmp_path / "a.json"
+    r2 = tmp_path / "b.json"
+    r1.write_text(
+        json.dumps(_report("p1", percent=90.0, band="A")), encoding="utf-8"
+    )
+    r2.write_text(
+        json.dumps(_report("p2", percent=70.0, band="C")), encoding="utf-8"
+    )
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(json.dumps([str(r1), str(r2)]), encoding="utf-8")
+    cli = (
+        Path(__file__).resolve().parents[1]
+        / "skills"
+        / "grader"
+        / "scripts"
+        / "compose_session_rollup.py"
+    )
+    proc = subprocess.run(
+        [
+            sys.executable,
+            str(cli),
+            "--reports-manifest",
+            str(manifest),
+            "--session-id",
+            "manifest-sess",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    data = json.loads(proc.stdout)
+    assert data["grain"] == "session_rollup"
+    assert data["prompt_id"] == "manifest-sess"
     assert data["member_prompt_ids"] == ["p1", "p2"]

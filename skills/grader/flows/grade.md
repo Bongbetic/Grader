@@ -42,9 +42,15 @@ Both scan and paste/import paths require explicit Learner confirmation before gr
 
 Grade only after the Learner confirms.
 
+### Large intakes (scale playbook)
+
+When intake returns **more than 30** candidates, default to a **representative sample of up to 30** prompts unless the Learner explicitly opts in to grade the full corpus. State the total count, the sample size, and how prompts were chosen (e.g. stratified by time or band spread) before judging.
+
+**Each graded prompt requires host-LLM judge JSON** — the agent running this flow scores every prompt individually. Heuristic batch judges, keyword rubrics, or scripted shortcuts are **out of scope** for learner-facing grades; they may exist only for internal dev calibration, never as a substitute for per-prompt judge output passed to `finalize_grade.py`.
+
 ## 3. Judge each prompt
 
-**You are the judge.** The agent running this skill scores each prompt — there is no external judge service.
+**You are the judge.** The agent running this skill scores each prompt — there is no external judge service. Do not use heuristic batch scripts or automated rubric shortcuts for learner-facing grades; every prompt needs full dimension JSON from the host model.
 
 Omit any turn classified `workflow_protocol_reply` from Craft grading and from efficacy rework counts. Grade only turns where the user composes their own instruction.
 
@@ -193,7 +199,19 @@ Three axes always appear via the renderer: **Craft** (band raw→adjusted, cavea
 
 ### Session rollup (multi-prompt intake)
 
-When the Learner graded **more than one** prompt in this intake window and wants a session view, compose after per-prompt renders (or instead of repeating every prompt):
+When the Learner graded **more than one** prompt in this intake window and wants a session view, compose after per-prompt renders (or instead of repeating every prompt).
+
+For **many reports** (especially on Windows, where 500+ `--reports` paths exceed the command-line limit), write paths to a JSON manifest and pass that file:
+
+```bash
+# reports-manifest.json → ["path/to/p1.json", "path/to/p2.json", ...]
+python3 scripts/compose_session_rollup.py \
+  --reports-manifest path/to/reports-manifest.json \
+  [--intake-json path/to/intake.json] \
+  [--session-id <id>]
+```
+
+For small batches, inline paths still work:
 
 ```bash
 python3 scripts/compose_session_rollup.py \
@@ -203,6 +221,14 @@ python3 scripts/compose_session_rollup.py \
 ```
 
 Stdout is shared-schema JSON (`grain=session_rollup`). Fill `slots.next_actions` (host hybrid; strongest/weakest already exemplar-seeded), then render with the same markdown/HTML CLIs. Do not freestyle a rollup narrative.
+
+### Temp artifacts (retention and cleanup)
+
+During a grade run, intermediate files may land under `scripts/` or a host temp directory (judge JSON, per-prompt report JSON, manifests). Policy:
+
+- **Keep** finalized report JSON only as long as needed to render and compose rollup; persist durable grades via `finalize_grade.py` (writes to `~/.grader/`).
+- **Delete** ad hoc temp dirs and scratch files (`*.json` staging, `.tmp_*` folders, one-off analysis scripts) before ending the session or after rollup render succeeds.
+- **Do not** commit temp artifacts to git or leave hundreds of report files in the skill tree.
 
 ## 6. Offer practice or coach
 
