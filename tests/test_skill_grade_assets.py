@@ -86,6 +86,17 @@ def test_grade_flow_has_judge_instructions(grade_flow_text):
     assert "return only schema json" in grade_flow_text.lower()
     assert "N/A" in grade_flow_text
     assert "conditional" in grade_flow_text.lower()
+    assert "classification" in grade_flow_text.lower()
+    assert "task_complexity" in grade_flow_text
+    assert "prompt_class" in grade_flow_text
+    assert "proportionality" in grade_flow_text.lower()
+    assert "valid_continuation" in grade_flow_text
+
+
+def test_grade_flow_asks_model_class_when_unknown(grade_flow_text):
+    assert "unknown" in grade_flow_text.lower()
+    assert "ask the learner" in grade_flow_text.lower()
+    assert "target_model_class" in grade_flow_text
 
 
 def test_grade_flow_renderer_only_playbook(grade_flow_text):

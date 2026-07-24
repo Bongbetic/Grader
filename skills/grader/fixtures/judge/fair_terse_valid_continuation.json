@@ -1,0 +1,50 @@
+{
+  "classification": {
+    "classifier_version": "v1",
+    "task_complexity": {
+      "value": "trivial",
+      "evidence_span": "commit and push",
+      "confidence": "high"
+    },
+    "prompt_class": {
+      "value": "valid_continuation",
+      "evidence_span": "commit and push",
+      "confidence": "high"
+    }
+  },
+  "dimensions": {
+    "D1": {
+      "level": 3,
+      "rationale": "Clear git action; objective complete in session context."
+    },
+    "D2": {
+      "level": 2,
+      "rationale": "Prior turns supply repo context; terse continuation does not need repeated motivation."
+    },
+    "D3": {
+      "level": 2,
+      "rationale": "Implicit constraints from ongoing session; adequate for this complexity."
+    },
+    "D4": {
+      "level": 2,
+      "rationale": "Command shape is standard for git handoff."
+    },
+    "D5": {
+      "level": 1,
+      "rationale": "Class-agnostic one-liner; no model tuning."
+    },
+    "D6": {
+      "level": 3,
+      "rationale": "Minimal words; no bloat for a trivial continuation."
+    },
+    "D7": {
+      "level": 2,
+      "rationale": "Pass/fail is observable (push succeeds)."
+    },
+    "D8": { "level": "N/A", "rationale": "No factual grounding needed." },
+    "D9": { "level": "N/A", "rationale": "No examples needed." },
+    "D10": { "level": "N/A", "rationale": "No voice constraints." },
+    "D11": { "level": "N/A", "rationale": "No safety-sensitive output." }
+  },
+  "disqualifiers": []
+}

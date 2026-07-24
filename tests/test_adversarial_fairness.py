@@ -21,3 +21,5 @@ def test_valid_continuation_not_penalized_for_brevity():
     rows = {r["id"]: r for r in load_gold(BASE / "fairness.jsonl")}
     tvc = rows["fair-terse-valid-continuation"]
     assert tvc["human_levels"]["D1"] >= 2  # terse but complete-in-context
+    assert tvc["human_levels"]["D2"] == 2  # proportional D2, not zeroed for brevity
+    assert tvc["human_band"] in ("A", "B")

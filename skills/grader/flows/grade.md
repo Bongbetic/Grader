@@ -51,16 +51,35 @@ Omit any turn classified `workflow_protocol_reply` from Craft grading and from e
 For each prompt record:
 
 1. Read `references/rubric-sheet.md` and `references/judge-schema.json`.
-2. Score the full redacted prompt (`PromptRecord.redacted_text`) against D1-D11 yourself:
+2. Emit a required `classification` block **before** scoring dimensions:
+   - `classifier_version`: `"v1"`
+   - `task_complexity` — `trivial | simple | moderate | complex` (required)
+   - `prompt_class` — `standalone | valid_continuation | lazy_delegation | execution_handoff_gap | workflow_protocol_reply` (required when classifiable)
+   - Each entry needs `value`, verbatim `evidence_span`, and `confidence` (`low` / `medium` / `high`).
+   - Apply the **proportionality lens** from the rubric sheet: score D1/D3/D6 against foreseeable need for this complexity; for `valid_continuation`, score D2 proportionally (prior context can supply motivation — do not zero D2 for brevity alone).
+3. Score the full redacted prompt (`PromptRecord.redacted_text`) against D1-D11 yourself:
    - Return only schema JSON from `references/judge-schema.json` — no markdown, no preamble, no explanation outside the JSON.
    - Mark conditional dimensions (D8-D11) **N/A** when the task does not trigger them.
    - Set a `disqualifiers` array with exact IDs from `DISQUALIFIER_IDS` in `scripts/domain.py` when any cap applies.
-3. Write the JSON object to a temp file or pass it directly to `finalize_grade.py`.
+4. Write the JSON object to a temp file or pass it directly to `finalize_grade.py`.
 
 Example judge JSON shape:
 
 ```json
 {
+  "classification": {
+    "classifier_version": "v1",
+    "task_complexity": {
+      "value": "simple",
+      "evidence_span": "build a CLI that sorts a list",
+      "confidence": "high"
+    },
+    "prompt_class": {
+      "value": "standalone",
+      "evidence_span": "build a CLI that sorts a list",
+      "confidence": "high"
+    }
+  },
   "dimensions": {
     "D1": {"level": 3, "rationale": "Clear action and acceptance criteria."},
     "D2": {"level": 2, "rationale": "Background present; motivation implied."},

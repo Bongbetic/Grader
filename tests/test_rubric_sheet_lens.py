@@ -9,6 +9,8 @@ def test_sheet_has_proportionality_and_conventions():
         "foreseeable need",
         "proportional",
         "underinvested_for_task",
+        "valid_continuation",
+        "d2",
         "divergence",
         "reasoning model",
         "delimiters",

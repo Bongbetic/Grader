@@ -5,12 +5,15 @@ from pathlib import Path
 
 import pytest
 from domain import DIMENSION_WEIGHTS, NA, DimensionScore, GradeReport
+from gold_set import load_gold
 from judge_schema import build_grade_report, parse_judge_output
 
 ROOT = Path(__file__).resolve().parents[1]
 JUDGE_FIXTURES = ROOT / "skills" / "grader" / "fixtures" / "judge"
+GOLD_FAIRNESS = ROOT / "skills" / "grader" / "fixtures" / "gold" / "fairness.jsonl"
 VALID_JUDGE = JUDGE_FIXTURES / "valid_after.json"
 INVALID_JUDGE = JUDGE_FIXTURES / "invalid_missing_d1.json"
+TERSE_CONTINUATION_JUDGE = JUDGE_FIXTURES / "fair_terse_valid_continuation.json"
 CLI = ROOT / "skills" / "grader" / "scripts" / "finalize_grade.py"
 
 
@@ -222,3 +225,29 @@ def test_finalize_grade_cli_redacts_excerpt_and_exits_on_invalid_judge(tmp_path,
     )
     assert proc.returncode != 0
     assert "D1" in proc.stderr or "missing" in proc.stderr
+
+
+def test_fair_terse_valid_continuation_finalize_not_band_d():
+    """Gold fixture: proportional judge scores terse git continuation near band B, not D."""
+    gold = {r["id"]: r for r in load_gold(GOLD_FAIRNESS)}["fair-terse-valid-continuation"]
+    data = json.loads(TERSE_CONTINUATION_JUDGE.read_text(encoding="utf-8"))
+
+    classification = data["classification"]
+    assert classification["task_complexity"]["value"] in ("trivial", "simple")
+    assert classification["prompt_class"]["value"] == "valid_continuation"
+
+    scores, rationales, flags = parse_judge_output(data)
+    levels = {s.dimension_id: s.level for s in scores}
+    for dim, expected in gold["human_levels"].items():
+        assert levels[dim] == expected, f"{dim}: judge {levels[dim]} != gold {expected}"
+
+    report = build_grade_report(
+        "fair-terse-valid-continuation",
+        scores,
+        rationales,
+        flags,
+        gold["model_class"],
+    )
+    assert report.band != "D"
+    assert report.band in ("B", "C")
+    assert levels["D2"] == 2

@@ -156,7 +156,9 @@ Disqualifier caps applied? ________   Final grade: ____
 
 ## Classification & attribution (judge instructions)
 
-Before scoring dimensions, emit a `classification` block. Every entry needs a
+Before scoring dimensions, emit a `classification` block. **`task_complexity` and
+`prompt_class` are required** for every scored prompt (abstain on `prompt_class`
+only when the transcript truly does not support a confident call). Every entry needs a
 verbatim evidence span from the redacted transcript (`evidence_span` field) and a `confidence`
 (low/medium/high). When the transcript does not support a confident call,
 **abstain** — use `indeterminate` (rework_cause) or omit the optional field.
@@ -179,16 +181,25 @@ verbatim evidence span from the redacted transcript (`evidence_span` field) and 
 Deterministic restate/correction counts are candidate signals only; your
 attributed classification is the verdict.
 
-## Proportionality lens (applies to D1, D3, D6)
+## Proportionality lens (applies to D1, D3, D6; D2 when `valid_continuation`)
 
-Score D1/D3 against the **foreseeable need** implied by `task_complexity`, not an
+Score D1/D3/D6 against the **foreseeable need** implied by `task_complexity`, not an
 absolute maximum:
 
-- Terse on a trivial/simple task → do not dock D1/D3 for brevity. A one-liner can score well.
+- Terse on a trivial/simple task → do not dock D1/D3/D6 for brevity. A one-liner can score well.
 - Terse on a moderate/complex task where structure would foreseeably have helped
   → dock D1/D3 and set the flag `underinvested_for_task`. This flag is evidence
   only; it does not cap. It records that the prompt left proportional upside on
   the table.
+- **D6:** reward economy when the prompt is appropriately lean for the complexity;
+  do not penalize a terse prompt that still meets the foreseeable need.
+
+**D2 — valid continuations.** When `prompt_class` is `valid_continuation` and prior
+user turns already supply audience, motivation, or repo context, score D2
+**proportionally** — level 2 is appropriate when context is implicit in the
+session (e.g. "commit and push" after a full change list). Do not zero D2 or
+treat missing repeated background as a defect. Reserve D2 = 0–1 for
+`lazy_delegation` or standalone prompts that truly lack context.
 
 This is the "was there upside left on the table?" test, not "did the agent cope anyway?"
 
