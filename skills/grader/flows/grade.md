@@ -87,6 +87,35 @@ model_class.classify(None)  # "unknown"
 
 When session context exists for this prompt, build Efficacy and Planning JSON (report-shaped fields from [Wire efficacy planning and outcome modifier into finalize](https://github.com/Bongbetic/Grader/issues/9)) and pass both. When either is missing, omit that flag — finalize marks the axis `unavailable` with `no session context`.
 
+For **claude**, **cursor**, or **codex** intake, derive both JSON objects from segmented turns via `discover_turns` (not a cursor-only branch):
+
+```bash
+python3 scripts/build_session_outcome.py \
+  --tool <claude|cursor|codex> \
+  [--session-id <session-id>] \
+  [--home path/to/tool/home] \
+  --efficacy-out path/to/efficacy.json \
+  --planning-out path/to/planning.json
+```
+
+Or from Python:
+
+```python
+import sys
+sys.path.insert(0, "scripts")
+from build_session_outcome import build_session_outcome
+
+efficacy, planning = build_session_outcome(
+    "cursor",
+    session_id="<session-id>",
+    follow_up_labels={},          # host judge labels when available
+    scope_change_labels=[],       # host judge labels when available
+    consent_covers_transcript=True,
+)
+```
+
+`tool_or_environment` attribution confidence is capped at **medium** when the adapter cannot preserve tool outputs (Cursor today). Merge host `follow_up_labels` / `scope_change_labels` before calling; the builder applies the cap and sets `high_confidence_user_underspec` / `high_confidence_underspec` for finalize.
+
 Run the deterministic finalizer for each judge output:
 
 ```bash

@@ -96,6 +96,7 @@ def test_grade_flow_renderer_only_playbook(grade_flow_text):
     assert "render_grade_html.py" in grade_flow_text
     assert "--efficacy-json" in grade_flow_text
     assert "--planning-json" in grade_flow_text
+    assert "build_session_outcome" in grade_flow_text
     assert "slots" in lower
     assert "<=120" in grade_flow_text
     assert "<=80" in grade_flow_text

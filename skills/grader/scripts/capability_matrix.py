@@ -16,31 +16,32 @@ class AdapterCapability:
     assistant_text: bool   # preserves assistant turn text
     timestamp: bool        # yields per-turn or per-session timestamps
     workflow_markers: bool  # surfaces slash/command/skill markers
+    tool_outputs: bool     # preserves tool-call outputs for attribution
 
 
-_ALL_FALSE = AdapterCapability(False, False, False, False, False)
+_ALL_FALSE = AdapterCapability(False, False, False, False, False, False)
 
 CAPABILITY_MATRIX: dict[str, AdapterCapability] = {
     # Claude: per-file sessions; discover_turns preserves user + assistant turns.
     "claude": AdapterCapability(
         role=True, session_boundary=True, assistant_text=True,
-        timestamp=True, workflow_markers=True,
+        timestamp=True, workflow_markers=True, tool_outputs=True,
     ),
     "cursor": AdapterCapability(
         role=True, session_boundary=True, assistant_text=True,
-        timestamp=True, workflow_markers=False,
+        timestamp=True, workflow_markers=False, tool_outputs=False,
     ),
     "codex": AdapterCapability(
         role=True, session_boundary=True, assistant_text=True,
-        timestamp=True, workflow_markers=False,
+        timestamp=True, workflow_markers=False, tool_outputs=True,
     ),
     "copilot": AdapterCapability(
         role=False, session_boundary=False, assistant_text=False,
-        timestamp=False, workflow_markers=False,
+        timestamp=False, workflow_markers=False, tool_outputs=False,
     ),
     "import_paste": AdapterCapability(
         role=False, session_boundary=False, assistant_text=False,
-        timestamp=False, workflow_markers=False,
+        timestamp=False, workflow_markers=False, tool_outputs=False,
     ),
 }
 
